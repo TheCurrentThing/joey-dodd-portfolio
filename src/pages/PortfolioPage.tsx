@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { projects } from "../lib/database";
 import type { Project } from "../types/project";
+import { projects } from "../lib/database";
+import AmbientBackdrop from "../components/AmbientBackdrop";
+import FilterBar from "../components/FilterBar";
+import ProjectCard from "../components/ProjectCard";
 
 const ALL_CATEGORY = "All";
 
@@ -45,83 +47,59 @@ export default function PortfolioPage() {
   ];
 
   return (
-    <div className="min-h-screen px-4 py-20">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-12 text-center">
-          <h1 className="mb-4 text-4xl font-bold text-white md:text-6xl">Portfolio</h1>
-          <p className="mx-auto max-w-2xl text-xl text-gray-300">
-            Explore a collection of digital artwork, illustration, and process-led
-            project presentation.
-          </p>
-        </div>
-
-        <div className="mb-12 flex flex-wrap justify-center gap-4">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
-              className={`rounded-full px-6 py-2 text-sm font-medium transition-colors ${
-                activeCategory === category
-                  ? "bg-white text-black"
-                  : "bg-gray-800 text-white hover:bg-gray-700"
-              }`}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 9 }).map((_, index) => (
-              <div
-                key={index}
-                className="aspect-square animate-pulse rounded-lg bg-gray-800"
-              />
-            ))}
-          </div>
-        ) : filteredProjects.length > 0 ? (
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {filteredProjects.map((project) => (
-              <Link
-                key={project.id}
-                to={`/portfolio/${project.slug}`}
-                className="group block"
-              >
-                <div className="mb-4 aspect-square overflow-hidden rounded-lg bg-gray-800">
-                  <img
-                    src={project.thumbnail_url || imageFallback(project.title)}
-                    alt={project.title}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    loading="lazy"
-                  />
-                </div>
-                <div>
-                  <h3 className="mb-1 text-xl font-semibold text-white transition-colors group-hover:text-gray-300">
-                    {project.title}
-                  </h3>
-                  <p className="text-sm text-gray-400">
-                    {project.category || "Uncategorized"}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="py-20 text-center">
-            <p className="text-lg text-gray-400">
-              {activeCategory === ALL_CATEGORY
-                ? "No projects found."
-                : `No projects found in ${activeCategory}.`}
+    <div className="min-h-screen overflow-hidden pt-24">
+      <section className="relative px-4 pb-12 pt-8 md:pb-16 md:pt-12">
+        <AmbientBackdrop intensity="strong" />
+        <div className="relative mx-auto max-w-7xl">
+          <div className="max-w-3xl">
+            <p className="text-sm uppercase tracking-[0.36em] text-[#ddb779]">All Work</p>
+            <h1 className="mt-5 font-serif text-[clamp(3rem,7vw,5.6rem)] leading-[0.96] text-white">
+              Portfolio
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-300 md:text-xl">
+              A gallery-oriented view of illustration, concept work, and image-led
+              storytelling. Filter by category, but keep the art doing most of the talking.
             </p>
           </div>
-        )}
-      </div>
+        </div>
+      </section>
+
+      <section className="relative px-4 pb-24 md:pb-32">
+        <div className="mx-auto max-w-7xl">
+          <FilterBar
+            categories={categories}
+            activeCategory={activeCategory}
+            onSelect={setActiveCategory}
+          />
+
+          {loading ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 9 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.04]"
+                >
+                  <div className="aspect-[4/5] shimmer" />
+                </div>
+              ))}
+            </div>
+          ) : filteredProjects.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {filteredProjects.map((project, index) => (
+                <ProjectCard key={project.id} project={project} index={index} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] px-8 py-24 text-center">
+              <p className="text-lg text-neutral-300">
+                {activeCategory === ALL_CATEGORY
+                  ? "No projects found."
+                  : `No projects found in ${activeCategory}.`}
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
-}
-
-function imageFallback(seed: string): string {
-  const encoded = encodeURIComponent(seed.slice(0, 2).toUpperCase() || "JD");
-  return `https://placehold.co/1200x1200/111827/F9FAFB?text=${encoded}`;
 }

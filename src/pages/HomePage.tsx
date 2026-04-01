@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { projects } from "../lib/database";
+import { ArrowRight } from "@phosphor-icons/react";
 import type { Project } from "../types/project";
+import { projects } from "../lib/database";
+import { fallbackArt, projectImage } from "../lib/art";
+import AmbientBackdrop from "../components/AmbientBackdrop";
+import ArtDirectedImage from "../components/ArtDirectedImage";
+import FeaturedGrid from "../components/FeaturedGrid";
+import AboutStrip from "../components/AboutStrip";
 
 export default function HomePage() {
   const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
@@ -17,119 +23,135 @@ export default function HomePage() {
     });
   }, []);
 
+  const heroProjects = featuredProjects.slice(0, 3);
+
   return (
     <div className="min-h-screen">
-      <section className="relative flex h-screen items-center justify-center bg-gray-900">
-        <div className="space-y-8 px-4 text-center">
-          <h1 className="text-5xl font-bold text-white md:text-7xl">Joey Dodd</h1>
-          <p className="mx-auto max-w-2xl text-xl text-gray-300 md:text-2xl">
-            Digital Artist &amp; Illustrator
-          </p>
-          <div className="flex flex-col justify-center gap-4 sm:flex-row">
-            <Link
-              to="/portfolio"
-              className="rounded-lg bg-white px-8 py-3 font-medium text-black transition-colors hover:bg-gray-200"
-            >
-              View Portfolio
-            </Link>
-            <Link
-              to="/contact"
-              className="rounded-lg border border-white px-8 py-3 font-medium text-white transition-colors hover:bg-white hover:text-black"
-            >
-              Get In Touch
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="px-4 py-20">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="mb-12 text-center text-4xl font-bold text-white">
-            Featured Work
-          </h2>
-
-          {loading ? (
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="aspect-square animate-pulse rounded-lg bg-gray-800"
-                />
-              ))}
-            </div>
-          ) : featuredProjects.length > 0 ? (
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {featuredProjects.map((project) => (
-                <Link
-                  key={project.id}
-                  to={`/portfolio/${project.slug}`}
-                  className="group block"
-                >
-                  <div className="aspect-square overflow-hidden rounded-lg bg-gray-800">
-                    <img
-                      src={project.thumbnail_url || imageFallback(project.title)}
-                      alt={project.title}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="mt-4">
-                    <h3 className="text-xl font-semibold text-white transition-colors group-hover:text-gray-300">
-                      {project.title}
-                    </h3>
-                    <p className="text-gray-400">{project.category || "Uncategorized"}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="py-20 text-center">
-              <p className="text-lg text-gray-400">No featured projects yet.</p>
-            </div>
-          )}
-
-          <div className="mt-12 text-center">
-            <Link
-              to="/portfolio"
-              className="inline-flex items-center gap-2 rounded-lg bg-gray-800 px-6 py-3 text-white transition-colors hover:bg-gray-700"
-            >
-              View All Work
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section id="about" className="border-t border-gray-800 px-4 py-20">
-        <div className="mx-auto grid max-w-5xl gap-10 md:grid-cols-[1.2fr_0.8fr] md:items-center">
-          <div className="space-y-6">
-            <p className="text-sm uppercase tracking-[0.35em] text-gray-400">About</p>
-            <h2 className="text-3xl font-bold text-white md:text-5xl">
-              Illustration, concept work, and visual storytelling.
-            </h2>
-            <p className="text-lg leading-8 text-gray-300">
-              Joey Dodd&rsquo;s portfolio is built to foreground the artwork while
-              keeping the publishing workflow simple on the CMS side. Featured
-              projects, full galleries, and admin updates all route through the same
-              Supabase-backed content model.
+      <section className="relative overflow-hidden px-4 pb-24 pt-28 md:pb-32 md:pt-36">
+        <AmbientBackdrop intensity="strong" />
+        <div className="absolute inset-0 bg-[linear-gradient(125deg,rgba(7,7,8,0.08),rgba(7,7,8,0.58),rgba(7,7,8,0.94))]" />
+        <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
+          <div className="max-w-xl">
+            <p className="text-sm uppercase tracking-[0.36em] text-[#ddb779]">
+              Artist Portfolio
             </p>
-            <Link
-              to="/contact"
-              className="inline-flex items-center rounded-lg border border-gray-700 px-6 py-3 text-white transition-colors hover:border-white hover:bg-white hover:text-black"
-            >
-              Start a Conversation
-            </Link>
-          </div>
-
-          <div className="rounded-2xl border border-gray-800 bg-gradient-to-br from-gray-800 via-gray-900 to-black p-8">
-            <div className="grid gap-6 sm:grid-cols-2">
-              <Stat
+            <h1 className="mt-6 font-serif text-[clamp(3.6rem,8vw,7.2rem)] leading-[0.94] text-white">
+              Joey Dodd
+            </h1>
+            <p className="mt-7 max-w-lg text-xl font-light leading-8 text-neutral-300">
+              Cinematic illustration, concept-forward image-making, and a portfolio
+              experience designed to let atmosphere carry the first impression.
+            </p>
+            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+              <Link
+                to="/portfolio"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#e0bc7b] px-8 py-4 text-sm uppercase tracking-[0.28em] text-black transition-transform duration-300 hover:-translate-y-0.5 hover:bg-[#ecc98a]"
+              >
+                View Portfolio
+              </Link>
+              <Link
+                to="/contact"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.03] px-8 py-4 text-sm uppercase tracking-[0.28em] text-white backdrop-blur-sm transition-colors hover:border-white/35 hover:bg-white/[0.06]"
+              >
+                Contact
+              </Link>
+            </div>
+            <div className="mt-12 grid grid-cols-3 gap-4">
+              <HeroStat label="Medium" value="Digital" />
+              <HeroStat label="Focus" value="Worlds" />
+              <HeroStat
                 label="Featured"
                 value={String(featuredProjects.length || 0).padStart(2, "0")}
               />
-              <Stat label="Medium" value="Digital" />
-              <Stat label="Format" value="Portfolio" />
-              <Stat label="Editing" value="CMS" />
             </div>
+          </div>
+
+          <div className="relative h-[34rem] md:h-[42rem]">
+            <div className="absolute inset-0 rounded-[2.25rem] border border-white/10 bg-white/[0.03] backdrop-blur-[2px]" />
+            <div className="float-slow absolute left-[4%] top-[8%] h-[72%] w-[42%] overflow-hidden rounded-[1.9rem] border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+              <ArtDirectedImage
+                src={heroProjects[0] ? projectImage(heroProjects[0], 0) : fallbackArt(0)}
+                fallback={fallbackArt(0)}
+                alt={heroProjects[0]?.title || "Atmospheric artwork"}
+                loading="eager"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08),rgba(0,0,0,0.72))]" />
+            </div>
+            <div className="float-delay absolute right-[4%] top-0 h-[48%] w-[45%] overflow-hidden rounded-[1.7rem] border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+              <ArtDirectedImage
+                src={heroProjects[1] ? projectImage(heroProjects[1], 1) : fallbackArt(1)}
+                fallback={fallbackArt(1)}
+                alt={heroProjects[1]?.title || "Portfolio texture"}
+                loading="eager"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),rgba(0,0,0,0.7))]" />
+            </div>
+            <div className="absolute bottom-[4%] right-[10%] h-[42%] w-[52%] overflow-hidden rounded-[1.8rem] border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+              <ArtDirectedImage
+                src={heroProjects[2] ? projectImage(heroProjects[2], 2) : fallbackArt(2)}
+                fallback={fallbackArt(2)}
+                alt={heroProjects[2]?.title || "Illustration background"}
+                loading="eager"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),rgba(0,0,0,0.84))]" />
+            </div>
+            <div className="absolute bottom-[7%] left-[14%] rounded-full border border-white/15 bg-black/55 px-5 py-3 backdrop-blur-md">
+              <p className="text-[11px] uppercase tracking-[0.32em] text-[#e4be7a]">
+                Atmospheric Illustration
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative px-4 py-24 md:py-32">
+        <AmbientBackdrop intensity="soft" />
+        <div className="relative mx-auto max-w-7xl">
+          <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.36em] text-[#ddb779]">
+                Featured Work
+              </p>
+              <h2 className="mt-4 max-w-2xl font-serif text-4xl text-white md:text-5xl">
+                A curated front row for the newest and most representative work.
+              </h2>
+            </div>
+            <Link
+              to="/portfolio"
+              className="inline-flex items-center gap-3 text-sm uppercase tracking-[0.28em] text-white/80 transition-colors hover:text-white"
+            >
+              Browse all work
+              <ArrowRight size={18} />
+            </Link>
+          </div>
+
+          <FeaturedGrid projects={featuredProjects} loading={loading} />
+        </div>
+      </section>
+
+      <AboutStrip projects={featuredProjects} />
+
+      <section className="relative overflow-hidden px-4 py-24 md:py-28">
+        <AmbientBackdrop intensity="medium" />
+        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] px-8 py-12 md:px-12 md:py-16">
+          <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(227,190,122,0.16),rgba(10,10,12,0)_36%,rgba(10,10,12,0.88))]" />
+          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-sm uppercase tracking-[0.35em] text-[#ddb779]">Next Project</p>
+              <h2 className="mt-4 font-serif text-4xl text-white md:text-5xl">
+                Ready to build something textured, dramatic, and memorable.
+              </h2>
+              <p className="mt-5 max-w-xl text-lg leading-8 text-neutral-300">
+                Commission inquiries, collaborations, and selected freelance projects
+                are welcome. The contact flow stays simple; the presentation does not.
+              </p>
+            </div>
+            <Link
+              to="/contact"
+              className="inline-flex items-center justify-center rounded-full bg-[#e0bc7b] px-8 py-4 text-sm uppercase tracking-[0.28em] text-black transition-transform duration-300 hover:-translate-y-0.5 hover:bg-[#ecc98a]"
+            >
+              Start a Conversation
+            </Link>
           </div>
         </div>
       </section>
@@ -137,16 +159,11 @@ export default function HomePage() {
   );
 }
 
-function imageFallback(seed: string): string {
-  const encoded = encodeURIComponent(seed.slice(0, 2).toUpperCase() || "JD");
-  return `https://placehold.co/1200x1200/111827/F9FAFB?text=${encoded}`;
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
+function HeroStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-gray-700 bg-black/20 p-5">
-      <p className="text-xs uppercase tracking-[0.3em] text-gray-500">{label}</p>
-      <p className="mt-3 text-3xl font-semibold text-white">{value}</p>
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 backdrop-blur-sm">
+      <p className="text-[10px] uppercase tracking-[0.28em] text-[#ddb779]">{label}</p>
+      <p className="mt-2 text-lg font-medium text-white">{value}</p>
     </div>
   );
 }
