@@ -1,0 +1,55 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Prata:wght@400&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-background: hsl(0, 0%, 7%);
+  --color-foreground: hsl(40, 20%, 92%);
+  --color-primary: hsl(40, 25%, 50%);
+  --color-primary-foreground: hsl(0, 0%, 7%);
+  --color-secondary: hsl(35, 12%, 15%);
+  --color-secondary-foreground: hsl(40, 20%, 90%);
+  --color-tertiary: hsl(40, 28%, 55%);
+  --color-tertiary-foreground: hsl(0, 0%, 8%);
+  --color-border: hsl(30, 5%, 25%);
+  --color-input: hsl(30, 5%, 20%);
+  --color-ring: hsl(40, 28%, 55%);
+  --color-success: hsl(145, 43%, 52%);
+  --color-warning: hsl(30, 95%, 64%);
+  --font-sans: "DM Sans", sans-serif;
+  --font-serif: "Prata", serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --border-radius: 8px;
+}
+
+html,
+body {
+  background-color: hsl(0, 0%, 7%);
+  color: hsl(40, 20%, 92%);
+  font-family: "DM Sans", sans-serif;
+  font-weight: 300;
+  scroll-behavior: smooth;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@layer base {
+  *:focus-visible {
+    outline: 2px solid hsl(40, 28%, 55%);
+    outline-offset: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
