@@ -7,6 +7,10 @@ const supabaseKey =
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
   import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+const supabaseStorageBucket =
+  import.meta.env.VITE_SUPABASE_STORAGE_BUCKET ||
+  import.meta.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ||
+  "portfolio-images";
 
 export const SUPABASE_CONFIG_ERROR =
   !supabaseUrl || !supabaseKey
@@ -18,7 +22,7 @@ export const supabase = createClient(
   supabaseKey || "missing-key"
 );
 
-export const STORAGE_BUCKET = "project-images";
+export const STORAGE_BUCKET = supabaseStorageBucket;
 
 // Auth helpers
 export const auth = {
