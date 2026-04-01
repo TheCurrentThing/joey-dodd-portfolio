@@ -66,13 +66,14 @@ function StorageBrowser({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-      <div className="bg-neutral-900 border border-neutral-700 rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-neutral-900 border border-neutral-700 rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="storage-browser-title">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
-          <h3 className="font-serif text-white text-lg">Browse Storage</h3>
+          <h3 id="storage-browser-title" className="font-serif text-white text-lg">Browse Storage</h3>
           <button
             onClick={onClose}
             className="text-neutral-400 hover:text-white text-xl leading-none"
+            aria-label="Close storage browser"
           >
             ×
           </button>
