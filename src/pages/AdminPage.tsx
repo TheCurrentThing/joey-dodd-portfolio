@@ -1,736 +1,608 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import { useAuth, useMutation, useQuery } from "@animaapp/playground-react-sdk";
+import { useEffect, useState } from "react";
 import {
-  UploadSimple,
-  Trash,
+  FloppyDisk,
+  PencilSimple,
   Plus,
-  CaretDown,
-  CaretUp,
-  Star,
-  StarHalf,
-  ImageSquare,
-  CheckCircle,
-  WarningCircle,
-  SignOut,
+  TrashSimple,
+  UploadSimple,
+  X,
 } from "@phosphor-icons/react";
-import { uploadImage, listFolder, getPublicUrl } from "../lib/storage";
+import { useAuth } from "../hooks/useAuth";
+import { projectImageService, projectService } from "../lib/database";
+import { uploadImage } from "../lib/storage";
+import type {
+  Project,
+  ProjectCreateInput,
+  ProjectUpdateInput,
+  ProjectWithImages,
+} from "../types/project";
 
-// ── Storage Browser ──────────────────────────────────────────────────────────
+type DragState = {
+  imageId: string;
+  projectId: string;
+};
 
-const BROWSE_FOLDERS = ["thumbnails", "heroes", "gallery"];
-
-type StorageFile = { name: string; folder: string; publicUrl: string };
-
-function StorageBrowser({
-  onSelect,
-  onClose,
-}: {
-  onSelect: (url: string) => void;
-  onClose: () => void;
-}) {
-  const [folder, setFolder] = useState(BROWSE_FOLDERS[0]);
-  const [files, setFiles] = useState<StorageFile[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [customFolder, setCustomFolder] = useState("");
-
-  const load = useCallback(async (f: string) => {
-    setLoading(true);
-    setError(null);
-    const { files: raw, error: err } = await listFolder(f);
-    if (err) {
-      setError(err);
-      setFiles([]);
-    } else {
-      setFiles(
-        raw
-          .filter((r) => r.name !== ".emptyFolderPlaceholder")
-          .map((r) => ({
-            name: r.name,
-            folder: f,
-            publicUrl: getPublicUrl(`${f}/${r.name}`),
-          }))
-      );
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    load(folder);
-  }, [folder, load]);
-
-  const handleCustomFolder = () => {
-    const f = customFolder.trim().replace(/^\/|\/$/g, "");
-    if (f) { setFolder(f); load(f); }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-      <div className="bg-neutral-900 border border-neutral-700 rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="storage-browser-title">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
-          <h3 id="storage-browser-title" className="font-serif text-white text-lg">Browse Storage</h3>
-          <button
-            onClick={onClose}
-            className="text-neutral-400 hover:text-white text-xl leading-none"
-            aria-label="Close storage browser"
-          >
-            ×
-          </button>
-        </div>
-
-        {/* Folder tabs + custom */}
-        <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-neutral-800">
-          {BROWSE_FOLDERS.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFolder(f)}
-              className={`font-mono text-xs uppercase tracking-widest px-3 py-1.5 rounded transition-colors duration-200 ${
-                folder === f
-                  ? "bg-amber-600 text-white"
-                  : "bg-neutral-800 text-neutral-400 hover:text-white"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-          <div className="flex items-center gap-1 ml-auto">
-            <input
-              value={customFolder}
-              onChange={(e) => setCustomFolder(e.target.value)}
-              placeholder="Custom folder path…"
-              onKeyDown={(e) => e.key === "Enter" && handleCustomFolder()}
-              className="bg-neutral-800 border border-neutral-700 text-white text-xs px-2 py-1.5 rounded w-44 focus:outline-none focus:border-amber-500"
-            />
-            <button
-              onClick={handleCustomFolder}
-              className="bg-neutral-700 text-white text-xs px-3 py-1.5 rounded hover:bg-neutral-600 transition-colors duration-200"
-            >
-              Go
-            </button>
-          </div>
-        </div>
-
-        {/* Grid */}
-        <div className="flex-1 overflow-y-auto p-5">
-          {loading && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="aspect-square bg-neutral-800 rounded animate-pulse" />
-              ))}
-            </div>
-          )}
-
-          {!loading && error && (
-            <p className="text-red-400 text-sm font-mono text-center py-12">{error}</p>
-          )}
-
-          {!loading && !error && files.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-neutral-500">
-              <ImageSquare size={40} />
-              <p className="font-sans text-sm">No images found in <code className="font-mono text-amber-400">/{folder}</code></p>
-            </div>
-          )}
-
-          {!loading && !error && files.length > 0 && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-              {files.map((f) => (
-                <button
-                  key={f.publicUrl}
-                  onClick={() => { onSelect(f.publicUrl); onClose(); }}
-                  className="group relative aspect-square bg-neutral-800 rounded overflow-hidden focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  title={f.name}
-                >
-                  <img
-                    src={f.publicUrl}
-                    alt={f.name}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center">
-                    <CheckCircle
-                      size={28}
-                      weight="fill"
-                      className="text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    />
-                  </div>
-                  <p className="absolute bottom-0 inset-x-0 bg-black/60 text-xs text-white font-mono px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    {f.name}
-                  </p>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── ImageUploader (with browse button) ───────────────────────────────────────
-
-const CATEGORIES = [
-  "Character Design",
-  "Illustration",
-  "Concept Art",
-  "Product / Toy Design",
-  "Graphic / Logo Work",
-  "Personal Work",
-];
-
-type UploadStatus = { state: "idle" | "uploading" | "done" | "error"; message?: string };
-
-function ImageUploader({
-  label,
-  onUploaded,
-  folder,
-  accept = "image/*",
-}: {
-  label: string;
-  folder: string;
-  onUploaded: (url: string) => void;
-  accept?: string;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<UploadStatus>({ state: "idle" });
-  const [preview, setPreview] = useState<string | null>(null);
-  const [showBrowser, setShowBrowser] = useState(false);
-
-  const handleFile = async (file: File) => {
-    setPreview(URL.createObjectURL(file));
-    setStatus({ state: "uploading" });
-    const result = await uploadImage(file, folder);
-    if (result.success) {
-      onUploaded(result.publicUrl);
-      setStatus({ state: "done", message: "Uploaded successfully" });
-    } else {
-      setStatus({ state: "error", message: result.error });
-    }
-  };
-
-  const handleBrowsePick = (url: string) => {
-    setPreview(url);
-    onUploaded(url);
-    setStatus({ state: "done", message: "Selected from storage" });
-  };
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <label className="font-mono text-xs uppercase tracking-widest text-amber-400">
-          {label}
-        </label>
-        <button
-          type="button"
-          onClick={() => setShowBrowser(true)}
-          className="font-mono text-xs uppercase tracking-widest text-neutral-400 hover:text-amber-400 transition-colors duration-200 flex items-center gap-1"
-        >
-          <ImageSquare size={13} /> Browse Storage
-        </button>
-      </div>
-      <div
-        className="relative border-2 border-dashed border-neutral-700 rounded-md overflow-hidden cursor-pointer hover:border-amber-500 transition-colors duration-300 flex items-center justify-center bg-neutral-900"
-        style={{ minHeight: 120 }}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault();
-          const file = e.dataTransfer.files[0];
-          if (file) handleFile(file);
-        }}
-      >
-        {preview ? (
-          <img
-            src={preview}
-            alt="preview"
-            className="w-full h-full object-cover absolute inset-0"
-          />
-        ) : (
-          <div className="flex flex-col items-center gap-2 text-neutral-500 p-4">
-            <ImageSquare size={32} weight="regular" />
-            <span className="font-sans text-sm text-center">
-              Click or drag to upload
-            </span>
-          </div>
-        )}
-        {status.state === "uploading" && (
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-            <span className="font-sans text-white text-sm animate-pulse">
-              Uploading...
-            </span>
-          </div>
-        )}
-      </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
-        }}
-      />
-      {status.state === "done" && (
-        <p className="flex items-center gap-1 text-green-400 text-xs font-mono">
-          <CheckCircle size={14} /> {status.message}
-        </p>
-      )}
-      {status.state === "error" && (
-        <p className="flex items-center gap-1 text-red-400 text-xs font-mono">
-          <WarningCircle size={14} /> {status.message}
-        </p>
-      )}
-      {showBrowser && (
-        <StorageBrowser
-          onSelect={handleBrowsePick}
-          onClose={() => setShowBrowser(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-function NewProjectForm({ onClose }: { onClose: () => void }) {
-  const { create, isPending } = useMutation("Project");
-  const [form, setForm] = useState({
+export default function AdminPage() {
+  const { signOut } = useAuth();
+  const [projects, setProjects] = useState<ProjectWithImages[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingProject, setEditingProject] = useState<ProjectWithImages | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [formData, setFormData] = useState<Partial<Project>>({
     title: "",
-    category: CATEGORIES[0],
+    slug: "",
     description: "",
-    thumbnailUrl: "",
-    heroImageUrl: "",
-    isFeatured: false,
-    sortOrder: 0,
-    externalLink: "",
+    category: "",
+    featured: false,
+    published: true,
   });
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [savingImageOrderFor, setSavingImageOrderFor] = useState<string | null>(null);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [dragOverImageId, setDragOverImageId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.title.trim()) { setError("Title is required."); return; }
-    if (!form.thumbnailUrl) { setError("Thumbnail image is required."); return; }
-    if (!form.heroImageUrl) { setError("Hero image is required."); return; }
-    setError("");
-    try {
-      await create({
-        title: form.title,
-        category: form.category,
-        description: form.description,
-        thumbnailUrl: form.thumbnailUrl,
-        heroImageUrl: form.heroImageUrl,
-        isFeatured: form.isFeatured,
-        sortOrder: form.sortOrder,
-        externalLink: form.externalLink || undefined,
-      });
-      onClose();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create project.");
+  useEffect(() => {
+    void loadProjects();
+  }, []);
+
+  const loadProjects = async () => {
+    const { data, error: requestError } = await projectService.getAll();
+
+    if (requestError) {
+      setError("Failed to load projects");
+    } else {
+      setProjects(data || []);
     }
+
+    setLoading(false);
   };
 
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-neutral-900 border border-neutral-700 rounded-lg p-6 flex flex-col gap-5"
-    >
-      <h3 className="font-serif text-white text-xl mb-1">New Project</h3>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="flex flex-col gap-1">
-          <label className="font-mono text-xs uppercase tracking-widest text-amber-400">Title *</label>
-          <input
-            value={form.title}
-            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-            placeholder="Project title"
-            className="bg-neutral-800 border border-neutral-600 text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-amber-500"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="font-mono text-xs uppercase tracking-widest text-amber-400">Category</label>
-          <select
-            value={form.category}
-            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-            className="bg-neutral-800 border border-neutral-600 text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-amber-500"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <label className="font-mono text-xs uppercase tracking-widest text-amber-400">Description</label>
-        <textarea
-          value={form.description}
-          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-          placeholder="Short description of the project..."
-          rows={3}
-          className="bg-neutral-800 border border-neutral-600 text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-amber-500 resize-none"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <ImageUploader
-          label="Thumbnail Image *"
-          folder="thumbnails"
-          onUploaded={(url) => setForm((f) => ({ ...f, thumbnailUrl: url }))}
-        />
-        <ImageUploader
-          label="Hero Image *"
-          folder="heroes"
-          onUploaded={(url) => setForm((f) => ({ ...f, heroImageUrl: url }))}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="flex flex-col gap-1">
-          <label className="font-mono text-xs uppercase tracking-widest text-amber-400">Sort Order</label>
-          <input
-            type="number"
-            value={form.sortOrder}
-            onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))}
-            className="bg-neutral-800 border border-neutral-600 text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-amber-500"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="font-mono text-xs uppercase tracking-widest text-amber-400">External Link</label>
-          <input
-            type="url"
-            value={form.externalLink}
-            onChange={(e) => setForm((f) => ({ ...f, externalLink: e.target.value }))}
-            placeholder="https://artstation.com/..."
-            className="bg-neutral-800 border border-neutral-600 text-white text-sm px-3 py-2 rounded focus:outline-none focus:border-amber-500"
-          />
-        </div>
-      </div>
-
-      <label className="flex items-center gap-3 cursor-pointer select-none">
-        <div
-          className={`w-5 h-5 rounded flex items-center justify-center border transition-colors duration-200 ${form.isFeatured ? "bg-amber-500 border-amber-500" : "border-neutral-600 bg-neutral-800"}`}
-          onClick={() => setForm((f) => ({ ...f, isFeatured: !f.isFeatured }))}
-        >
-          {form.isFeatured && <Star size={12} weight="fill" className="text-black" />}
-        </div>
-        <span className="font-sans text-neutral-200 text-sm">
-          Feature on home page
-        </span>
-      </label>
-
-      {error && (
-        <p className="flex items-center gap-1 text-red-400 text-sm font-mono">
-          <WarningCircle size={14} /> {error}
-        </p>
-      )}
-
-      <div className="flex gap-3 justify-end pt-2">
-        <button
-          type="button"
-          onClick={onClose}
-          className="font-sans text-sm uppercase tracking-widest text-neutral-400 px-5 py-2 border border-neutral-700 rounded hover:border-neutral-500 transition-colors duration-300"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="font-sans text-sm uppercase tracking-widest bg-amber-600 text-white px-6 py-2 rounded hover:bg-amber-500 transition-colors duration-300 disabled:opacity-50"
-        >
-          {isPending ? "Saving..." : "Save Project"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function GalleryImageUploader({ projectId }: { projectId: string }) {
-  const { create, remove, isPending } = useMutation("ProjectImage");
-  const { data: images } = useQuery("ProjectImage", {
-    where: { projectId },
-    orderBy: { sortOrder: "asc" },
+  const toProjectPayload = (): ProjectCreateInput => ({
+    title: formData.title?.trim() || "",
+    slug: formData.slug?.trim() || "",
+    description: formData.description?.trim() || null,
+    category: formData.category?.trim() || null,
+    thumbnail_url: editingProject?.thumbnail_url || null,
+    featured: formData.featured ?? false,
+    published: formData.published ?? true,
+    sort_order: editingProject?.sort_order ?? projects.length,
   });
-  const [uploading, setUploading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const [showGalleryBrowser, setShowGalleryBrowser] = useState(false);
-
-  const handleFiles = async (files: FileList) => {
-    setUploading(true);
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const result = await uploadImage(file, `gallery/${projectId}`);
-      if (result.success) {
-        await create({
-          projectId,
-          url: result.publicUrl,
-          isProcessShot: false,
-          sortOrder: (images?.length ?? 0) + i,
-        });
-      }
+  const handleCreateProject = async () => {
+    if (!formData.title || !formData.slug) {
+      setError("Title and slug are required");
+      return;
     }
-    setUploading(false);
+
+    const { data, error: requestError } = await projectService.create(toProjectPayload());
+    if (requestError || !data) {
+      setError("Failed to create project");
+      return;
+    }
+
+    setProjects([...projects, { ...data, images: [] }]);
+    setShowCreateForm(false);
+    resetForm();
   };
 
-  const handleBrowsePick = async (url: string) => {
-    await create({
+  const handleUpdateProject = async () => {
+    if (!editingProject || !formData.title || !formData.slug) {
+      setError("Title and slug are required");
+      return;
+    }
+
+    const updates: ProjectUpdateInput = {
+      ...toProjectPayload(),
+      thumbnail_url: editingProject.thumbnail_url,
+      sort_order: editingProject.sort_order,
+    };
+
+    const { error: requestError } = await projectService.update(editingProject.id, updates);
+    if (requestError) {
+      setError("Failed to update project");
+      return;
+    }
+
+    setProjects(
+      projects.map((project) =>
+        project.id === editingProject.id ? { ...project, ...updates } : project
+      )
+    );
+    setEditingProject(null);
+    resetForm();
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    if (!confirm("Are you sure you want to delete this project?")) {
+      return;
+    }
+
+    const { error: requestError } = await projectService.delete(projectId);
+    if (requestError) {
+      setError("Failed to delete project");
+      return;
+    }
+
+    setProjects(projects.filter((project) => project.id !== projectId));
+  };
+
+  const handleImageUpload = async (projectId: string, files: FileList) => {
+    setUploadingImages(true);
+    setError("");
+
+    try {
+      const currentProject = projects.find((project) => project.id === projectId);
+      const startingOrder = currentProject?.images.length ?? 0;
+      let firstUploadedUrl: string | null = null;
+
+      const uploadPromises = Array.from(files).map(async (file, index) => {
+        const result = await uploadImage(file);
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+
+        if (!firstUploadedUrl) {
+          firstUploadedUrl = result.url;
+        }
+
+        const { error: createError } = await projectImageService.create({
+          project_id: projectId,
+          image_url: result.url,
+          sort_order: startingOrder + index,
+        });
+
+        if (createError) {
+          throw createError;
+        }
+      });
+
+      await Promise.all(uploadPromises);
+
+      if (firstUploadedUrl && !currentProject?.thumbnail_url) {
+        await projectService.update(projectId, { thumbnail_url: firstUploadedUrl });
+      }
+
+      await loadProjects();
+    } catch {
+      setError("Failed to upload images");
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  const handleDeleteImage = async (imageId: string) => {
+    if (!confirm("Are you sure you want to delete this image?")) {
+      return;
+    }
+
+    const { error: requestError } = await projectImageService.delete(imageId);
+    if (requestError) {
+      setError("Failed to delete image");
+      return;
+    }
+
+    await loadProjects();
+  };
+
+  const reorderImages = async (
+    projectId: string,
+    sourceImageId: string,
+    destinationImageId: string
+  ) => {
+    if (sourceImageId === destinationImageId) {
+      return;
+    }
+
+    const project = projects.find((item) => item.id === projectId);
+    if (!project) {
+      return;
+    }
+
+    const sourceIndex = project.images.findIndex((image) => image.id === sourceImageId);
+    const destinationIndex = project.images.findIndex(
+      (image) => image.id === destinationImageId
+    );
+
+    if (sourceIndex === -1 || destinationIndex === -1) {
+      return;
+    }
+
+    const reorderedImages = [...project.images];
+    const [movedImage] = reorderedImages.splice(sourceIndex, 1);
+    reorderedImages.splice(destinationIndex, 0, movedImage);
+
+    const normalizedImages = reorderedImages.map((image, index) => ({
+      ...image,
+      sort_order: index,
+    }));
+
+    setProjects((currentProjects) =>
+      currentProjects.map((item) =>
+        item.id === projectId ? { ...item, images: normalizedImages } : item
+      )
+    );
+    setSavingImageOrderFor(projectId);
+    setDragState(null);
+    setDragOverImageId(null);
+
+    const { error: requestError } = await projectImageService.reorder(
       projectId,
-      url,
-      isProcessShot: false,
-      sortOrder: images?.length ?? 0,
+      normalizedImages.map((image) => image.id)
+    );
+
+    if (requestError) {
+      setError("Failed to save image order");
+      await loadProjects();
+    }
+
+    setSavingImageOrderFor(null);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      slug: "",
+      description: "",
+      category: "",
+      featured: false,
+      published: true,
+    });
+    setError("");
+  };
+
+  const startEditing = (project: ProjectWithImages) => {
+    setEditingProject(project);
+    setFormData({
+      title: project.title,
+      slug: project.slug,
+      description: project.description || "",
+      category: project.category || "",
+      featured: project.featured,
+      published: project.published,
     });
   };
 
-  return (
-    <div className="mt-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-xs uppercase tracking-widest text-amber-400">
-          Gallery Images ({images?.length ?? 0})
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowGalleryBrowser(true)}
-            disabled={uploading || isPending}
-            className="inline-flex items-center gap-1.5 font-sans text-xs uppercase tracking-widest bg-neutral-800 text-neutral-300 px-3 py-1.5 rounded hover:bg-neutral-700 transition-colors duration-300 disabled:opacity-50 border border-neutral-600"
-          >
-            <ImageSquare size={14} />
-            Browse Storage
-          </button>
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            disabled={uploading || isPending}
-            className="inline-flex items-center gap-1.5 font-sans text-xs uppercase tracking-widest bg-neutral-700 text-white px-3 py-1.5 rounded hover:bg-neutral-600 transition-colors duration-300 disabled:opacity-50"
-          >
-            <UploadSimple size={14} />
-            {uploading ? "Uploading..." : "Upload New"}
-          </button>
-        </div>
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files) handleFiles(e.target.files);
-          }}
-        />
-      </div>
-      {showGalleryBrowser && (
-        <StorageBrowser
-          onSelect={async (url) => { await handleBrowsePick(url); }}
-          onClose={() => setShowGalleryBrowser(false)}
-        />
-      )}
-      {images && images.length > 0 && (
-        <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-          {images.map((img) => (
-            <div key={img.id} className="relative group aspect-square bg-neutral-800 rounded overflow-hidden">
-              <img
-                src={img.url}
-                alt={img.caption ?? "Gallery image"}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-              <button
-                onClick={() => remove(img.id)}
-                className="absolute top-1 right-1 bg-black/70 text-red-400 rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                title="Remove image"
-              >
-                <Trash size={12} />
-              </button>
-              {img.isProcessShot && (
-                <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-amber-400 text-xs text-center py-0.5 font-mono">
-                  Process
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+  const categories = [
+    "Photography",
+    "Digital Art",
+    "Mixed Media",
+    "Sculpture",
+    "Installation",
+  ];
 
-function ProjectRow({ project }: { project: { id: string; title: string; category: string; thumbnailUrl: string; isFeatured: boolean; sortOrder: number } }) {
-  const { remove, update } = useMutation("Project");
-  const [expanded, setExpanded] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
-  return (
-    <div className="border border-neutral-700 rounded-lg overflow-hidden bg-neutral-900">
-      <div className="flex items-center gap-4 p-4">
-        <div className="w-14 h-14 rounded overflow-hidden bg-neutral-800 flex-shrink-0">
-          {project.thumbnailUrl ? (
-            <img src={project.thumbnailUrl} alt={project.title} className="w-full h-full object-cover" loading="lazy" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <ImageSquare size={20} className="text-neutral-600" />
-            </div>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h4 className="font-serif text-white truncate">{project.title}</h4>
-            {project.isFeatured && (
-              <StarHalf size={14} weight="fill" className="text-amber-400 flex-shrink-0" title="Featured" />
-            )}
-          </div>
-          <p className="font-mono text-xs text-neutral-400 uppercase tracking-widest mt-0.5">
-            {project.category}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={() => update(project.id, { isFeatured: !project.isFeatured })}
-            className={`p-1.5 rounded transition-colors duration-200 ${project.isFeatured ? "text-amber-400 hover:text-amber-300" : "text-neutral-500 hover:text-amber-400"}`}
-            title={project.isFeatured ? "Unfeature" : "Mark as featured"}
-          >
-            <Star size={16} weight={project.isFeatured ? "fill" : "regular"} />
-          </button>
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="p-1.5 rounded text-neutral-400 hover:text-white transition-colors duration-200"
-            title="Toggle gallery"
-          >
-            {expanded ? <CaretUp size={16} /> : <CaretDown size={16} />}
-          </button>
-          {confirmDelete ? (
-            <>
-              <button
-                onClick={() => { remove(project.id); setConfirmDelete(false); }}
-                className="text-xs font-mono text-red-400 px-2 py-1 border border-red-800 rounded hover:bg-red-900 transition-colors duration-200"
-              >
-                Confirm
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="text-xs font-mono text-neutral-400 px-2 py-1 border border-neutral-700 rounded hover:bg-neutral-800 transition-colors duration-200"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="p-1.5 rounded text-neutral-500 hover:text-red-400 transition-colors duration-200"
-              title="Delete project"
-            >
-              <Trash size={16} />
-            </button>
-          )}
-        </div>
-      </div>
-      {expanded && (
-        <div className="border-t border-neutral-800 px-4 pb-4">
-          <GalleryImageUploader projectId={project.id} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function AdminPage() {
-  const { user, isPending: authPending, isAnonymous, login, logout } = useAuth();
-  const [showNewForm, setShowNewForm] = useState(false);
-
-  const { data: projects, isPending: projectsPending } = useQuery("Project", {
-    orderBy: { sortOrder: "asc" },
-  });
-
-  if (authPending) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
-        <p className="font-sans text-neutral-400">Loading...</p>
-      </div>
-    );
-  }
-
-  if (isAnonymous || !user) {
-    return (
-      <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center gap-6">
-        <div className="text-center">
-          <h1 className="font-serif text-white text-3xl mb-2">Admin Panel</h1>
-          <p className="font-sans text-neutral-400 text-sm">Sign in to manage your portfolio</p>
-        </div>
-        <button
-          onClick={login}
-          className="bg-amber-600 text-white font-sans font-normal uppercase tracking-widest text-sm px-8 py-4 rounded-md hover:bg-amber-500 transition-colors duration-300"
-        >
-          Sign In
-        </button>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-white"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 pt-20 pb-24">
-      <div className="max-w-screen-lg mx-auto px-6 md:px-10">
-        {/* Header */}
-        <div className="py-12 flex items-start justify-between gap-4">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-widest text-amber-400 mb-2">
-              Admin Panel
-            </p>
-            <h1 className="font-serif text-white text-4xl">Portfolio Manager</h1>
-            <p className="font-sans text-neutral-400 text-sm mt-2">
-              Upload artwork to Supabase Storage and manage your projects.
-            </p>
-          </div>
+    <div className="min-h-screen px-4 py-20">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-4xl font-bold text-white">Admin Dashboard</h1>
           <button
-            onClick={logout}
-            className="flex-shrink-0 inline-flex items-center gap-2 font-sans text-xs uppercase tracking-widest text-neutral-400 border border-neutral-700 px-4 py-2 rounded hover:border-neutral-500 hover:text-neutral-200 transition-colors duration-300 mt-1"
+            onClick={() => void signOut()}
+            className="rounded-lg bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
           >
-            <SignOut size={14} />
             Sign Out
           </button>
         </div>
 
-        {/* New Project Button */}
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="font-serif text-white text-2xl">
-            Projects ({projects?.length ?? 0})
-          </h2>
-          {!showNewForm && (
-            <button
-              onClick={() => setShowNewForm(true)}
-              className="inline-flex items-center gap-2 bg-amber-600 text-white font-sans font-normal uppercase tracking-widest text-xs px-5 py-2.5 rounded-md hover:bg-amber-500 transition-colors duration-300"
-            >
-              <Plus size={16} weight="bold" />
-              New Project
+        {error && (
+          <div className="mb-6 rounded-lg bg-red-600 p-4 text-white">
+            {error}
+            <button onClick={() => setError("")} className="float-right ml-4">
+              <X size={20} />
             </button>
-          )}
+          </div>
+        )}
+
+        <div className="mb-8">
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700"
+          >
+            <Plus size={20} />
+            Create New Project
+          </button>
         </div>
 
-        {/* New Project Form */}
-        {showNewForm && (
-          <div className="mb-6">
-            <NewProjectForm onClose={() => setShowNewForm(false)} />
+        {(showCreateForm || editingProject) && (
+          <div className="mb-8 rounded-lg bg-gray-800 p-6">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-white">
+                {editingProject ? "Edit Project" : "Create New Project"}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setEditingProject(null);
+                  resetForm();
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <Field label="Title *">
+                <input
+                  type="text"
+                  value={formData.title || ""}
+                  onChange={(event) =>
+                    setFormData({ ...formData, title: event.target.value })
+                  }
+                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white"
+                  required
+                />
+              </Field>
+
+              <Field label="Slug *">
+                <input
+                  type="text"
+                  value={formData.slug || ""}
+                  onChange={(event) =>
+                    setFormData({ ...formData, slug: event.target.value })
+                  }
+                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white"
+                  required
+                />
+              </Field>
+
+              <Field label="Category">
+                <select
+                  value={formData.category || ""}
+                  onChange={(event) =>
+                    setFormData({ ...formData, category: event.target.value })
+                  }
+                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white"
+                >
+                  <option value="">Select category</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={formData.featured || false}
+                    onChange={(event) =>
+                      setFormData({ ...formData, featured: event.target.checked })
+                    }
+                    className="rounded"
+                  />
+                  Featured
+                </label>
+
+                <label className="flex items-center gap-2 text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={formData.published || false}
+                    onChange={(event) =>
+                      setFormData({ ...formData, published: event.target.checked })
+                    }
+                    className="rounded"
+                  />
+                  Published
+                </label>
+              </div>
+
+              <Field label="Description" className="md:col-span-2">
+                <textarea
+                  value={formData.description || ""}
+                  onChange={(event) =>
+                    setFormData({ ...formData, description: event.target.value })
+                  }
+                  rows={4}
+                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white"
+                />
+              </Field>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-4">
+              <button
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setEditingProject(null);
+                  resetForm();
+                }}
+                className="px-4 py-2 text-gray-300 transition-colors hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() =>
+                  void (editingProject ? handleUpdateProject() : handleCreateProject())
+                }
+                className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2 text-white transition-colors hover:bg-green-700"
+              >
+                <FloppyDisk size={20} />
+                {editingProject ? "Update" : "Create"}
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Project List */}
-        {projectsPending ? (
-          <div className="flex flex-col gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-20 bg-neutral-800 rounded-lg animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {projects && projects.length > 0 ? (
-              projects.map((p) => <ProjectRow key={p.id} project={p} />)
-            ) : (
-              <div className="py-16 text-center border border-dashed border-neutral-700 rounded-lg">
-                <ImageSquare size={40} className="text-neutral-600 mx-auto mb-3" />
-                <p className="font-sans text-neutral-500 text-sm">No projects yet. Create your first one above.</p>
+        <div className="space-y-6">
+          {projects.map((project) => (
+            <div key={project.id} className="rounded-lg bg-gray-800 p-6">
+              <div className="mb-4 flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-white">{project.title}</h3>
+                  <p className="text-gray-400">{project.category || "Uncategorized"}</p>
+                  <div className="mt-2 flex gap-2">
+                    {project.featured && (
+                      <span className="rounded bg-yellow-600 px-2 py-1 text-xs">
+                        Featured
+                      </span>
+                    )}
+                    {project.published ? (
+                      <span className="rounded bg-green-600 px-2 py-1 text-xs">
+                        Published
+                      </span>
+                    ) : (
+                      <span className="rounded bg-red-600 px-2 py-1 text-xs">
+                        Draft
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => startEditing(project)}
+                    className="p-2 text-blue-400 hover:text-blue-300"
+                  >
+                    <PencilSimple size={20} />
+                  </button>
+                  <button
+                    onClick={() => void handleDeleteProject(project.id)}
+                    className="p-2 text-red-400 hover:text-red-300"
+                  >
+                    <TrashSimple size={20} />
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
-        )}
+
+              <div className="mb-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-medium text-white">
+                      Images ({project.images.length})
+                    </h4>
+                    <p className="mt-1 text-xs uppercase tracking-[0.25em] text-gray-500">
+                      Drag and drop to reorder
+                    </p>
+                  </div>
+                  <div>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(event) =>
+                        event.target.files &&
+                        void handleImageUpload(project.id, event.target.files)
+                      }
+                      className="hidden"
+                      id={`upload-${project.id}`}
+                      disabled={uploadingImages}
+                    />
+                    <label
+                      htmlFor={`upload-${project.id}`}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-white transition-colors hover:bg-purple-700"
+                    >
+                      <UploadSimple size={16} />
+                      {uploadingImages ? "Uploading..." : "Upload Images"}
+                    </label>
+                  </div>
+                </div>
+
+                {project.images.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    {project.images.map((image, index) => {
+                      const isDragging = dragState?.imageId === image.id;
+                      const isDropTarget = dragOverImageId === image.id;
+
+                      return (
+                        <div
+                          key={image.id}
+                          className={`group relative rounded-lg border transition-all ${
+                            isDropTarget
+                              ? "border-blue-400 ring-2 ring-blue-500/40"
+                              : "border-transparent"
+                          } ${isDragging ? "opacity-50" : "opacity-100"}`}
+                          draggable
+                          onDragStart={() => {
+                            setDragState({ imageId: image.id, projectId: project.id });
+                            setDragOverImageId(image.id);
+                          }}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            if (dragState?.projectId === project.id) {
+                              setDragOverImageId(image.id);
+                            }
+                          }}
+                          onDragLeave={() => {
+                            if (dragOverImageId === image.id) {
+                              setDragOverImageId(null);
+                            }
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            if (dragState?.projectId === project.id) {
+                              void reorderImages(project.id, dragState.imageId, image.id);
+                            }
+                          }}
+                          onDragEnd={() => {
+                            setDragState(null);
+                            setDragOverImageId(null);
+                          }}
+                        >
+                          <img
+                            src={image.image_url}
+                            alt=""
+                            className="h-24 w-full rounded-lg object-cover"
+                          />
+                          <div className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-white">
+                            {index + 1}
+                          </div>
+                          <button
+                            onClick={() => void handleDeleteImage(image.id)}
+                            className="absolute right-1 top-1 rounded bg-red-600 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">No images uploaded yet</p>
+                )}
+
+                {savingImageOrderFor === project.id && (
+                  <p className="mt-3 text-sm text-blue-300">Saving image order...</p>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {projects.length === 0 && (
+            <div className="py-20 text-center">
+              <p className="text-lg text-gray-400">
+                No projects yet. Create your first project.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <label className="mb-2 block text-sm font-medium text-gray-300">{label}</label>
+      {children}
     </div>
   );
 }

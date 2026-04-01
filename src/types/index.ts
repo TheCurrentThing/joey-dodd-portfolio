@@ -1,1 +1,7 @@
-export type { Project, ProjectImage, ContactSubmission } from "./project";
+export type {
+  Project,
+  ProjectCreateInput,
+  ProjectImage,
+  ProjectUpdateInput,
+  ProjectWithImages,
+} from "./project";

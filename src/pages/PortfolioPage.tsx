@@ -1,127 +1,127 @@
-import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@animaapp/playground-react-sdk";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import ProjectCard from "../components/ProjectCard";
-import FilterBar from "../components/FilterBar";
-
-gsap.registerPlugin(ScrollTrigger);
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { projects } from "../lib/database";
+import type { Project } from "../types/project";
 
 const ALL_CATEGORY = "All";
 
 export default function PortfolioPage() {
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [activeCategory, setActiveCategory] = useState(ALL_CATEGORY);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
-
-  const {
-    data: projects,
-    isPending,
-    error,
-  } = useQuery("Project", {
-    orderBy: { sortOrder: "asc" },
-  });
-
-  const categories = projects
-    ? [ALL_CATEGORY, ...Array.from(new Set(projects.map((p) => p.category)))]
-    : [ALL_CATEGORY];
-
-  const filtered = projects
-    ? activeCategory === ALL_CATEGORY
-      ? projects
-      : projects.filter((p) => p.category === activeCategory)
-    : [];
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      if (headerRef.current) {
-        gsap.fromTo(
-          headerRef.current.querySelectorAll(".header-animate"),
-          { opacity: 0, y: 30 },
-          { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" },
-        );
+    projects.getAll().then(({ data }) => {
+      if (data) {
+        setAllProjects(data);
+        setFilteredProjects(data);
       }
+
+      setLoading(false);
     });
-    return () => ctx.revert();
   }, []);
 
   useEffect(() => {
-    if (!gridRef.current || isPending) return;
-    const ctx = gsap.context(() => {
-      const cards = gridRef.current!.querySelectorAll(".project-card");
-      gsap.fromTo(
-        cards,
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.5, stagger: 0.07, ease: "power2.out" },
-      );
-    });
-    return () => ctx.revert();
-  }, [filtered, isPending]);
+    if (activeCategory === ALL_CATEGORY) {
+      setFilteredProjects(allProjects);
+      return;
+    }
+
+    setFilteredProjects(
+      allProjects.filter((project) => project.category === activeCategory)
+    );
+  }, [activeCategory, allProjects]);
+
+  const categories = [
+    ALL_CATEGORY,
+    ...Array.from(
+      new Set(
+        allProjects
+          .map((project) => project.category)
+          .filter((category): category is string => Boolean(category))
+      )
+    ),
+  ];
 
   return (
-    <div className="min-h-screen bg-background pt-24">
-      <div className="max-w-screen-xl mx-auto px-6 md:px-10">
-        <div ref={headerRef} className="py-16 md:py-20">
-          <p className="header-animate font-mono text-label uppercase tracking-widest text-tertiary text-sm mb-3">
-            All Work
-          </p>
-          <h1 className="header-animate font-serif text-foreground text-h1 md:text-5xl mb-6">
-            Portfolio
-          </h1>
-          <p className="header-animate font-sans text-neutral-300 text-body-lg font-light max-w-xl">
-            A collection of character designs, illustrations, concept art, and
-            more.
+    <div className="min-h-screen px-4 py-20">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-12 text-center">
+          <h1 className="mb-4 text-4xl font-bold text-white md:text-6xl">Portfolio</h1>
+          <p className="mx-auto max-w-2xl text-xl text-gray-300">
+            Explore a collection of digital artwork, illustration, and process-led
+            project presentation.
           </p>
         </div>
 
-        <FilterBar
-          categories={categories}
-          activeCategory={activeCategory}
-          onSelect={setActiveCategory}
-        />
+        <div className="mb-12 flex flex-wrap justify-center gap-4">
+          {categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => setActiveCategory(category)}
+              className={`rounded-full px-6 py-2 text-sm font-medium transition-colors ${
+                activeCategory === category
+                  ? "bg-white text-black"
+                  : "bg-gray-800 text-white hover:bg-gray-700"
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
 
-        {isPending && (
-          <div className="py-32 text-center">
-            <p className="font-sans text-neutral-400 text-body-lg">
-              Loading projects...
-            </p>
-          </div>
-        )}
-
-        {error && (
-          <div className="py-32 text-center">
-            <p className="font-sans text-warning text-body-lg">
-              Error loading projects: {error.message}
-            </p>
-          </div>
-        )}
-
-        {!isPending && !error && (
-          <div
-            ref={gridRef}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-32"
-            role="list"
-            aria-label="Portfolio projects"
-          >
-            {filtered.map((project) => (
-              <div key={project.id} role="listitem" className="project-card">
-                <ProjectCard project={project} />
-              </div>
+        {loading ? (
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 9 }).map((_, index) => (
+              <div
+                key={index}
+                className="aspect-square animate-pulse rounded-lg bg-gray-800"
+              />
             ))}
-            {filtered.length === 0 && (
-              <div className="col-span-3 py-24 text-center">
-                <p className="font-sans text-neutral-400 text-body-lg">
-                  No projects in this category yet.
-                </p>
-              </div>
-            )}
+          </div>
+        ) : filteredProjects.length > 0 ? (
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {filteredProjects.map((project) => (
+              <Link
+                key={project.id}
+                to={`/portfolio/${project.slug}`}
+                className="group block"
+              >
+                <div className="mb-4 aspect-square overflow-hidden rounded-lg bg-gray-800">
+                  <img
+                    src={project.thumbnail_url || imageFallback(project.title)}
+                    alt={project.title}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                </div>
+                <div>
+                  <h3 className="mb-1 text-xl font-semibold text-white transition-colors group-hover:text-gray-300">
+                    {project.title}
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    {project.category || "Uncategorized"}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="py-20 text-center">
+            <p className="text-lg text-gray-400">
+              {activeCategory === ALL_CATEGORY
+                ? "No projects found."
+                : `No projects found in ${activeCategory}.`}
+            </p>
           </div>
         )}
       </div>
     </div>
   );
+}
+
+function imageFallback(seed: string): string {
+  const encoded = encodeURIComponent(seed.slice(0, 2).toUpperCase() || "JD");
+  return `https://placehold.co/1200x1200/111827/F9FAFB?text=${encoded}`;
 }

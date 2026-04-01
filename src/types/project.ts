@@ -1,37 +1,27 @@
 export type Project = {
   id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  createdByUserId: string | null;
   title: string;
-  category: string;
-  description: string;
-  thumbnailUrl: string;
-  heroImageUrl: string;
-  isFeatured: boolean;
-  externalLink?: string;
-  sortOrder: number;
+  slug: string;
+  description: string | null;
+  category: string | null;
+  thumbnail_url: string | null;
+  featured: boolean;
+  published: boolean;
+  sort_order: number;
+  created_at: string;
 };
 
 export type ProjectImage = {
   id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  createdByUserId: string | null;
-  projectId: string;
-  url: string;
-  caption?: string;
-  isProcessShot: boolean;
-  sortOrder: number;
+  project_id: string;
+  image_url: string;
+  sort_order: number;
+  created_at: string;
 };
 
-export type ContactSubmission = {
-  id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  createdByUserId: string | null;
-  name: string;
-  email: string;
-  subject?: string;
-  message: string;
+export type ProjectWithImages = Project & {
+  images: ProjectImage[];
 };
+
+export type ProjectCreateInput = Omit<Project, "id" | "created_at">;
+export type ProjectUpdateInput = Partial<ProjectCreateInput>;

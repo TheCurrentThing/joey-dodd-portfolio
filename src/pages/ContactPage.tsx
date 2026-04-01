@@ -1,6 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import { gsap } from "gsap";
-import { useMutation } from "@animaapp/playground-react-sdk";
+import { useState } from "react";
 import {
   EnvelopeSimple,
   InstagramLogo,
@@ -9,8 +7,6 @@ import {
 } from "@phosphor-icons/react";
 
 export default function ContactPage() {
-  const formRef = useRef<HTMLFormElement>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -20,349 +16,177 @@ export default function ContactPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const {
-    create,
-    isPending,
-    error: mutationError,
-  } = useMutation("ContactSubmission");
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      if (headerRef.current) {
-        gsap.fromTo(
-          headerRef.current.querySelectorAll(".header-animate"),
-          { opacity: 0, y: 30 },
-          { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" },
-        );
-      }
-      if (formRef.current) {
-        const fields = formRef.current.querySelectorAll(".field-animate");
-        gsap.fromTo(
-          fields,
-          { opacity: 0, y: 20 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.5,
-            stagger: 0.1,
-            ease: "power2.out",
-            delay: 0.4,
-          },
-        );
-      }
-    });
-    return () => ctx.revert();
-  }, []);
-
   const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = "Name is required.";
-    if (!formData.email.trim()) newErrors.email = "Email is required.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
-      newErrors.email = "Enter a valid email.";
-    if (!formData.message.trim()) newErrors.message = "Message is required.";
-    return newErrors;
+    const nextErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      nextErrors.name = "Name is required.";
+    }
+
+    if (!formData.email.trim()) {
+      nextErrors.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      nextErrors.email = "Enter a valid email.";
+    }
+
+    if (!formData.message.trim()) {
+      nextErrors.message = "Message is required.";
+    }
+
+    return nextErrors;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const nextErrors = validate();
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
       return;
     }
+
     setErrors({});
-    try {
-      await create({
-        name: formData.name,
-        email: formData.email,
-        subject: formData.subject || undefined,
-        message: formData.message,
-      });
-      setSubmitted(true);
-    } catch {
-      // error handled via mutationError
-    }
+
+    const subject = encodeURIComponent(
+      formData.subject || `Portfolio inquiry from ${formData.name}`
+    );
+    const body = encodeURIComponent(
+      `Name: ${formData.name}\nEmail: ${formData.email}\n\n${formData.message}`
+    );
+
+    window.location.href = `mailto:joey@joeydodd.art?subject=${subject}&body=${body}`;
+    setSubmitted(true);
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    if (errors[e.target.name]) {
-      setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
+    setFormData((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
+
+    if (errors[event.target.name]) {
+      setErrors((current) => ({
+        ...current,
+        [event.target.name]: "",
+      }));
     }
   };
 
   return (
-    <div className="min-h-screen bg-secondary pt-24">
-      <div className="max-w-screen-xl mx-auto px-6 md:px-10 py-16 md:py-24">
-        <div ref={headerRef} className="mb-16">
-          <p className="header-animate font-mono text-label uppercase tracking-widest text-tertiary text-sm mb-3">
-            Let's Talk
+    <div className="min-h-screen bg-gray-900 pt-24">
+      <div className="mx-auto max-w-screen-xl px-6 py-16 md:px-10 md:py-24">
+        <div className="mb-16">
+          <p className="mb-3 text-sm uppercase tracking-[0.35em] text-gray-400">
+            Let&apos;s Talk
           </p>
-          <h1 className="header-animate font-serif text-foreground text-h1 md:text-5xl mb-6">
-            Contact
-          </h1>
-          <p className="header-animate font-sans text-neutral-300 text-body-lg font-light max-w-xl">
-            Have a project in mind or want to collaborate? I'd love to hear from
-            you.
+          <h1 className="mb-6 text-4xl font-bold text-white md:text-6xl">Contact</h1>
+          <p className="max-w-2xl text-lg text-gray-300">
+            Have a project in mind or want to collaborate? This page now opens
+            your default email client directly, which removes the old Anima-only
+            submission dependency from the build.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24">
-          {/* Contact Info */}
+        <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 md:gap-24">
           <div className="flex flex-col gap-8">
             <div>
-              <h2 className="font-serif text-foreground text-h3 mb-6">
-                Get in touch
-              </h2>
+              <h2 className="mb-6 text-2xl font-semibold text-white">Get in touch</h2>
               <div className="flex flex-col gap-6">
-                <a
+                <ContactLink
                   href="mailto:joey@joeydodd.art"
-                  className="inline-flex items-center gap-4 text-neutral-200 hover:text-tertiary transition-colors duration-300 group"
-                  aria-label="Send email to Joey Dodd"
-                >
-                  <span className="w-12 h-12 rounded-md bg-neutral-800 flex items-center justify-center group-hover:bg-neutral-700 transition-colors duration-300">
-                    <EnvelopeSimple
-                      size={22}
-                      weight="regular"
-                      className="text-tertiary"
-                    />
-                  </span>
-                  <div>
-                    <p className="font-mono text-label uppercase tracking-widest text-tertiary text-xs mb-1">
-                      Email
-                    </p>
-                    <p className="font-sans text-foreground text-body-lg">
-                      joey@joeydodd.art
-                    </p>
-                  </div>
-                </a>
-
-                <a
+                  icon={<EnvelopeSimple size={22} weight="regular" className="text-white" />}
+                  label="Email"
+                  value="joey@joeydodd.art"
+                  ariaLabel="Send email to Joey Dodd"
+                />
+                <ContactLink
                   href="https://instagram.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-4 text-neutral-200 hover:text-tertiary transition-colors duration-300 group"
-                  aria-label="Joey Dodd on Instagram"
-                >
-                  <span className="w-12 h-12 rounded-md bg-neutral-800 flex items-center justify-center group-hover:bg-neutral-700 transition-colors duration-300">
-                    <InstagramLogo
-                      size={22}
-                      weight="regular"
-                      className="text-tertiary"
-                    />
-                  </span>
-                  <div>
-                    <p className="font-mono text-label uppercase tracking-widest text-tertiary text-xs mb-1">
-                      Instagram
-                    </p>
-                    <p className="font-sans text-foreground text-body-lg">
-                      @joeydodd.art
-                    </p>
-                  </div>
-                </a>
-
-                <a
+                  icon={<InstagramLogo size={22} weight="regular" className="text-white" />}
+                  label="Instagram"
+                  value="@joeydodd.art"
+                  ariaLabel="Joey Dodd on Instagram"
+                />
+                <ContactLink
                   href="https://linkedin.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-4 text-neutral-200 hover:text-tertiary transition-colors duration-300 group"
-                  aria-label="Joey Dodd on LinkedIn"
-                >
-                  <span className="w-12 h-12 rounded-md bg-neutral-800 flex items-center justify-center group-hover:bg-neutral-700 transition-colors duration-300">
-                    <LinkedinLogo
-                      size={22}
-                      weight="regular"
-                      className="text-tertiary"
-                    />
-                  </span>
-                  <div>
-                    <p className="font-mono text-label uppercase tracking-widest text-tertiary text-xs mb-1">
-                      LinkedIn
-                    </p>
-                    <p className="font-sans text-foreground text-body-lg">
-                      Joey Dodd
-                    </p>
-                  </div>
-                </a>
+                  icon={<LinkedinLogo size={22} weight="regular" className="text-white" />}
+                  label="LinkedIn"
+                  value="Joey Dodd"
+                  ariaLabel="Joey Dodd on LinkedIn"
+                />
               </div>
             </div>
 
-            <div className="rounded-md overflow-hidden">
-              <img
-                src="https://c.animaapp.com/mng9lb3oV7wJtj/img/ai_3.png"
-                alt="Art table with sketchbooks and tools"
-                className="w-full h-64 object-cover"
-                loading="lazy"
-              />
+            <div className="rounded-2xl border border-gray-800 bg-gradient-to-br from-gray-800 via-gray-900 to-black p-8">
+              <p className="text-sm uppercase tracking-[0.3em] text-gray-500">
+                Availability
+              </p>
+              <p className="mt-4 text-3xl font-semibold text-white">
+                Open for select commissions
+              </p>
+              <p className="mt-4 leading-7 text-gray-300">
+                Use the form to draft an email with your project type, timeline,
+                and references. That keeps the contact flow lightweight while the
+                CMS stays focused on portfolio content.
+              </p>
             </div>
           </div>
 
-          {/* Contact Form */}
           <div>
             {submitted ? (
-              <div className="flex flex-col items-center justify-center h-full py-16 text-center gap-6">
-                <div className="w-16 h-16 rounded-full bg-tertiary/20 flex items-center justify-center">
-                  <PaperPlaneTilt
-                    size={32}
-                    weight="regular"
-                    className="text-tertiary"
-                  />
+              <div className="flex h-full flex-col items-center justify-center gap-6 rounded-2xl border border-gray-800 bg-gray-950 px-8 py-16 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-800">
+                  <PaperPlaneTilt size={32} weight="regular" className="text-white" />
                 </div>
-                <h3 className="font-serif text-foreground text-h3">
-                  Message Sent!
-                </h3>
-                <p className="font-sans text-neutral-300 text-body-lg font-light max-w-sm">
-                  Thank you for reaching out. I'll get back to you as soon as
-                  possible.
+                <h3 className="text-3xl font-semibold text-white">Message Sent</h3>
+                <p className="max-w-sm text-lg text-gray-300">
+                  Your default email client should now be open with the message
+                  prefilled.
                 </p>
               </div>
             ) : (
               <form
-                ref={formRef}
                 onSubmit={handleSubmit}
                 noValidate
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-6 rounded-2xl border border-gray-800 bg-gray-950 p-8"
                 aria-label="Contact form"
               >
-                <div className="field-animate flex flex-col gap-2">
-                  <label
-                    htmlFor="name"
-                    className="font-mono text-label uppercase tracking-widest text-tertiary text-xs"
-                  >
-                    Name{" "}
-                    <span className="text-warning" aria-hidden="true">
-                      *
-                    </span>
-                  </label>
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="Your name"
-                    className="bg-neutral-800 border border-border text-foreground font-sans text-body-lg px-4 py-3 rounded-md focus:outline-none focus:border-tertiary transition-colors duration-300 placeholder:text-neutral-500"
-                    aria-required="true"
-                    aria-describedby={errors.name ? "name-error" : undefined}
-                  />
-                  {errors.name && (
-                    <p
-                      id="name-error"
-                      className="font-sans text-warning text-body text-sm"
-                      role="alert"
-                    >
-                      {errors.name}
-                    </p>
-                  )}
-                </div>
-
-                <div className="field-animate flex flex-col gap-2">
-                  <label
-                    htmlFor="email"
-                    className="font-mono text-label uppercase tracking-widest text-tertiary text-xs"
-                  >
-                    Email{" "}
-                    <span className="text-warning" aria-hidden="true">
-                      *
-                    </span>
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="your@email.com"
-                    className="bg-neutral-800 border border-border text-foreground font-sans text-body-lg px-4 py-3 rounded-md focus:outline-none focus:border-tertiary transition-colors duration-300 placeholder:text-neutral-500"
-                    aria-required="true"
-                    aria-describedby={errors.email ? "email-error" : undefined}
-                  />
-                  {errors.email && (
-                    <p
-                      id="email-error"
-                      className="font-sans text-warning text-body text-sm"
-                      role="alert"
-                    >
-                      {errors.email}
-                    </p>
-                  )}
-                </div>
-
-                <div className="field-animate flex flex-col gap-2">
-                  <label
-                    htmlFor="subject"
-                    className="font-mono text-label uppercase tracking-widest text-tertiary text-xs"
-                  >
-                    Subject
-                  </label>
-                  <input
-                    id="subject"
-                    name="subject"
-                    type="text"
-                    value={formData.subject}
-                    onChange={handleChange}
-                    placeholder="What's this about?"
-                    className="bg-neutral-800 border border-border text-foreground font-sans text-body-lg px-4 py-3 rounded-md focus:outline-none focus:border-tertiary transition-colors duration-300 placeholder:text-neutral-500"
-                  />
-                </div>
-
-                <div className="field-animate flex flex-col gap-2">
-                  <label
-                    htmlFor="message"
-                    className="font-mono text-label uppercase tracking-widest text-tertiary text-xs"
-                  >
-                    Message{" "}
-                    <span className="text-warning" aria-hidden="true">
-                      *
-                    </span>
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    rows={6}
-                    value={formData.message}
-                    onChange={handleChange}
-                    placeholder="Tell me about your project..."
-                    className="bg-neutral-800 border border-border text-foreground font-sans text-body-lg px-4 py-3 rounded-md focus:outline-none focus:border-tertiary transition-colors duration-300 placeholder:text-neutral-500 resize-none"
-                    aria-required="true"
-                    aria-describedby={
-                      errors.message ? "message-error" : undefined
-                    }
-                  />
-                  {errors.message && (
-                    <p
-                      id="message-error"
-                      className="font-sans text-warning text-body text-sm"
-                      role="alert"
-                    >
-                      {errors.message}
-                    </p>
-                  )}
-                </div>
-
-                {mutationError && (
-                  <p
-                    className="font-sans text-warning text-body text-sm"
-                    role="alert"
-                  >
-                    Something went wrong: {mutationError.message}
-                  </p>
-                )}
-
-                <div className="field-animate">
+                <FormField
+                  id="name"
+                  label="Name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  error={errors.name}
+                />
+                <FormField
+                  id="email"
+                  label="Email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  error={errors.email}
+                  type="email"
+                />
+                <FormField
+                  id="subject"
+                  label="Subject"
+                  value={formData.subject}
+                  onChange={handleChange}
+                  required={false}
+                />
+                <FormTextarea
+                  id="message"
+                  label="Message"
+                  value={formData.message}
+                  onChange={handleChange}
+                  error={errors.message}
+                />
+                <div>
                   <button
                     type="submit"
-                    disabled={isPending}
-                    className="inline-flex items-center gap-2 bg-cta-primary-bg text-cta-primary-fg font-sans font-normal uppercase tracking-widest text-label px-8 py-4 rounded-md hover:bg-tertiary transition-colors duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-2 rounded-md bg-white px-8 py-4 font-medium text-black transition-colors hover:bg-gray-200"
                   >
-                    {isPending ? "Sending..." : "Send Message"}
+                    Send Message
                     <PaperPlaneTilt size={18} weight="regular" />
                   </button>
                 </div>
@@ -371,6 +195,126 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ContactLink({
+  href,
+  icon,
+  label,
+  value,
+  ariaLabel,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  ariaLabel: string;
+}) {
+  const external = href.startsWith("http");
+
+  return (
+    <a
+      href={href}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noopener noreferrer" : undefined}
+      className="group inline-flex items-center gap-4 text-gray-200 transition-colors duration-300 hover:text-white"
+      aria-label={ariaLabel}
+    >
+      <span className="flex h-12 w-12 items-center justify-center rounded-md bg-gray-800 transition-colors duration-300 group-hover:bg-gray-700">
+        {icon}
+      </span>
+      <div>
+        <p className="mb-1 text-xs uppercase tracking-[0.25em] text-gray-400">{label}</p>
+        <p className="text-lg text-white">{value}</p>
+      </div>
+    </a>
+  );
+}
+
+function FormField({
+  id,
+  label,
+  value,
+  onChange,
+  error,
+  type = "text",
+  required = true,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  error?: string;
+  type?: string;
+  required?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label htmlFor={id} className="text-xs uppercase tracking-[0.25em] text-gray-400">
+        {label}{" "}
+        {required && (
+          <span className="text-red-400" aria-hidden="true">
+            *
+          </span>
+        )}
+      </label>
+      <input
+        id={id}
+        name={id}
+        type={type}
+        value={value}
+        onChange={onChange}
+        className="rounded-md border border-gray-700 bg-gray-900 px-4 py-3 text-lg text-white placeholder:text-gray-500 focus:border-white focus:outline-none"
+        aria-required={required}
+        aria-describedby={error ? `${id}-error` : undefined}
+      />
+      {error && (
+        <p id={`${id}-error`} className="text-sm text-red-400" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function FormTextarea({
+  id,
+  label,
+  value,
+  onChange,
+  error,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  error?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label htmlFor={id} className="text-xs uppercase tracking-[0.25em] text-gray-400">
+        {label}{" "}
+        <span className="text-red-400" aria-hidden="true">
+          *
+        </span>
+      </label>
+      <textarea
+        id={id}
+        name={id}
+        rows={6}
+        value={value}
+        onChange={onChange}
+        className="resize-none rounded-md border border-gray-700 bg-gray-900 px-4 py-3 text-lg text-white placeholder:text-gray-500 focus:border-white focus:outline-none"
+        aria-required="true"
+        aria-describedby={error ? `${id}-error` : undefined}
+      />
+      {error && (
+        <p id={`${id}-error`} className="text-sm text-red-400" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
