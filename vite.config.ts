@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [react()],
   publicDir: "./static",
   base: "/",
+  envPrefix: ["VITE_", "NEXT_PUBLIC_"],
   css: {
     postcss: {
       plugins: [tailwind()],

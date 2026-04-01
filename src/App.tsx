@@ -45,8 +45,9 @@ export default function App() {
           <p className="text-sm uppercase tracking-[0.3em] text-red-300">Configuration Error</p>
           <h1 className="mt-4 text-3xl font-bold">Supabase environment variables are missing</h1>
           <p className="mt-4 text-lg text-gray-200">
-            Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>
-            {" "}in the deployment environment, then redeploy.
+            Set <code>VITE_SUPABASE_URL</code> and either <code>VITE_SUPABASE_ANON_KEY</code>
+            {" "}or <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY</code> in the
+            deployment environment, then redeploy.
           </p>
           <p className="mt-3 text-sm text-gray-300">{SUPABASE_CONFIG_ERROR}</p>
         </div>
