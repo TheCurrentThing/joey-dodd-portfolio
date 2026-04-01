@@ -101,7 +101,6 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const heroImage = project.thumbnail_url || project.images[0]?.image_url || "";
   const processImages = project.images.filter(isProcessShot);
   const galleryImages = (() => {
     const regular = project.images.filter((image) => !isProcessShot(image));
@@ -120,6 +119,7 @@ export default function ProjectDetailPage() {
     }
     return [];
   })();
+  const heroImage = galleryImages[0]?.image_url || project.thumbnail_url || "";
 
   return (
     <div className="min-h-screen bg-background pt-20">

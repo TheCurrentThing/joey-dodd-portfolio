@@ -1,201 +1,769 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  CaretDown,
+  CaretUp,
+  CheckCircle,
   FloppyDisk,
-  PencilSimple,
+  ImageSquare,
   Plus,
+  SignOut,
+  Star,
   TrashSimple,
   UploadSimple,
+  WarningCircle,
   X,
 } from "@phosphor-icons/react";
 import { useAuth } from "../hooks/useAuth";
 import { projectImageService, projectService } from "../lib/database";
-import { uploadImage } from "../lib/storage";
-import type {
-  Project,
-  ProjectCreateInput,
-  ProjectUpdateInput,
-  ProjectWithImages,
-} from "../types/project";
+import { getPublicUrl, listImages, uploadImage } from "../lib/storage";
+import type { ProjectWithImages } from "../types/project";
+
+const BROWSE_FOLDERS = ["thumbnails", "heroes", "gallery"];
+const CATEGORIES = [
+  "Character Design",
+  "Illustration",
+  "Concept Art",
+  "Product / Toy Design",
+  "Graphic / Logo Work",
+  "Personal Work",
+];
+
+type StorageFile = {
+  name: string;
+  folder: string;
+  publicUrl: string;
+};
+
+type UploadStatus =
+  | { state: "idle" }
+  | { state: "uploading" }
+  | { state: "done"; message: string }
+  | { state: "error"; message: string };
 
 type DragState = {
   imageId: string;
   projectId: string;
 };
 
-export default function AdminPage() {
-  const { signOut } = useAuth();
-  const [projects, setProjects] = useState<ProjectWithImages[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [editingProject, setEditingProject] = useState<ProjectWithImages | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [formData, setFormData] = useState<Partial<Project>>({
-    title: "",
-    slug: "",
-    description: "",
-    category: "",
-    featured: false,
-    published: true,
-  });
-  const [uploadingImages, setUploadingImages] = useState(false);
-  const [savingImageOrderFor, setSavingImageOrderFor] = useState<string | null>(null);
-  const [dragState, setDragState] = useState<DragState | null>(null);
-  const [dragOverImageId, setDragOverImageId] = useState<string | null>(null);
-  const [error, setError] = useState("");
+type ProjectFormState = {
+  title: string;
+  slug: string;
+  category: string;
+  description: string;
+  thumbnailUrl: string;
+  leadImageUrl: string;
+  featured: boolean;
+  published: boolean;
+  sortOrder: number;
+};
 
-  useEffect(() => {
-    void loadProjects();
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+function getInitialForm(project?: ProjectWithImages): ProjectFormState {
+  return {
+    title: project?.title ?? "",
+    slug: project?.slug ?? "",
+    category: project?.category ?? CATEGORIES[0],
+    description: project?.description ?? "",
+    thumbnailUrl: project?.thumbnail_url ?? "",
+    leadImageUrl: project?.images[0]?.image_url ?? "",
+    featured: project?.featured ?? false,
+    published: project?.published ?? true,
+    sortOrder: project?.sort_order ?? 0,
+  };
+}
+
+function StorageBrowser({
+  initialFolder,
+  onSelect,
+  onClose,
+}: {
+  initialFolder: string;
+  onSelect: (url: string) => void;
+  onClose: () => void;
+}) {
+  const [folder, setFolder] = useState(initialFolder);
+  const [files, setFiles] = useState<StorageFile[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [customFolder, setCustomFolder] = useState("");
+
+  const loadFolder = useCallback(async (targetFolder: string) => {
+    setLoading(true);
+    setError(null);
+
+    const { files: rawFiles, error: requestError } = await listImages(targetFolder);
+    if (requestError) {
+      setFiles([]);
+      setError(requestError);
+      setLoading(false);
+      return;
+    }
+
+    setFiles(
+      rawFiles
+        .filter((file) => file.name !== ".emptyFolderPlaceholder")
+        .map((file) => ({
+          name: file.name,
+          folder: targetFolder,
+          publicUrl: getPublicUrl(`${targetFolder}/${file.name}`),
+        }))
+    );
+    setLoading(false);
   }, []);
 
-  const loadProjects = async () => {
-    const { data, error: requestError } = await projectService.getAll();
+  useEffect(() => {
+    void loadFolder(folder);
+  }, [folder, loadFolder]);
 
-    if (requestError) {
-      setError("Failed to load projects");
-    } else {
-      setProjects(data || []);
+  const handleCustomFolder = () => {
+    const nextFolder = customFolder.trim().replace(/^\/|\/$/g, "");
+    if (!nextFolder) {
+      return;
     }
 
-    setLoading(false);
+    setFolder(nextFolder);
+    void loadFolder(nextFolder);
   };
 
-  const toProjectPayload = (): ProjectCreateInput => ({
-    title: formData.title?.trim() || "",
-    slug: formData.slug?.trim() || "",
-    description: formData.description?.trim() || null,
-    category: formData.category?.trim() || null,
-    thumbnail_url: editingProject?.thumbnail_url || null,
-    featured: formData.featured ?? false,
-    published: formData.published ?? true,
-    sort_order: editingProject?.sort_order ?? projects.length,
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900">
+        <div className="flex items-center justify-between border-b border-neutral-800 px-5 py-4">
+          <h3 className="font-serif text-lg text-white">Browse Storage</h3>
+          <button
+            onClick={onClose}
+            className="text-xl leading-none text-neutral-400 transition-colors duration-200 hover:text-white"
+            aria-label="Close storage browser"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-b border-neutral-800 px-5 py-3">
+          {BROWSE_FOLDERS.map((browseFolder) => (
+            <button
+              key={browseFolder}
+              onClick={() => setFolder(browseFolder)}
+              className={`rounded px-3 py-1.5 font-mono text-xs uppercase tracking-widest transition-colors duration-200 ${
+                folder === browseFolder
+                  ? "bg-amber-600 text-white"
+                  : "bg-neutral-800 text-neutral-400 hover:text-white"
+              }`}
+            >
+              {browseFolder}
+            </button>
+          ))}
+          <div className="ml-auto flex items-center gap-1">
+            <input
+              value={customFolder}
+              onChange={(event) => setCustomFolder(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  handleCustomFolder();
+                }
+              }}
+              placeholder="Custom folder path..."
+              className="w-44 rounded border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none"
+            />
+            <button
+              onClick={handleCustomFolder}
+              className="rounded bg-neutral-700 px-3 py-1.5 text-xs text-white transition-colors duration-200 hover:bg-neutral-600"
+            >
+              Go
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5">
+          {loading && (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+              {Array.from({ length: 10 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="aspect-square animate-pulse rounded bg-neutral-800"
+                />
+              ))}
+            </div>
+          )}
+
+          {!loading && error && (
+            <p className="py-12 text-center font-mono text-sm text-red-400">{error}</p>
+          )}
+
+          {!loading && !error && files.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-3 py-16 text-neutral-500">
+              <ImageSquare size={40} />
+              <p className="text-sm">
+                No images found in{" "}
+                <code className="font-mono text-amber-400">/{folder}</code>
+              </p>
+            </div>
+          )}
+
+          {!loading && !error && files.length > 0 && (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+              {files.map((file) => (
+                <button
+                  key={file.publicUrl}
+                  onClick={() => {
+                    onSelect(file.publicUrl);
+                    onClose();
+                  }}
+                  className="group relative aspect-square overflow-hidden rounded bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  title={file.name}
+                >
+                  <img
+                    src={file.publicUrl}
+                    alt={file.name}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/40">
+                    <CheckCircle
+                      size={28}
+                      weight="fill"
+                      className="opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                    />
+                  </div>
+                  <p className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1 py-0.5 font-mono text-xs text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                    {file.name}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImageUploader({
+  label,
+  folder,
+  value,
+  helperText,
+  onUploaded,
+}: {
+  label: string;
+  folder: string;
+  value: string;
+  helperText?: string;
+  onUploaded: (url: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [status, setStatus] = useState<UploadStatus>({ state: "idle" });
+  const [showBrowser, setShowBrowser] = useState(false);
+
+  const handleFile = async (file: File) => {
+    setStatus({ state: "uploading" });
+    const result = await uploadImage(file, folder);
+
+    if (!result.success) {
+      setStatus({ state: "error", message: result.error });
+      return;
+    }
+
+    onUploaded(result.url);
+    setStatus({ state: "done", message: "Uploaded successfully" });
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <label className="font-mono text-xs uppercase tracking-widest text-amber-400">
+          {label}
+        </label>
+        <button
+          type="button"
+          onClick={() => setShowBrowser(true)}
+          className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-widest text-neutral-400 transition-colors duration-200 hover:text-amber-400"
+        >
+          <ImageSquare size={13} />
+          Browse Storage
+        </button>
+      </div>
+
+      <div
+        className="relative flex min-h-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-md border-2 border-dashed border-neutral-700 bg-neutral-900 transition-colors duration-300 hover:border-amber-500"
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+          const file = event.dataTransfer.files[0];
+          if (file) {
+            void handleFile(file);
+          }
+        }}
+      >
+        {value ? (
+          <img
+            src={value}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-2 p-4 text-neutral-500">
+            <ImageSquare size={32} />
+            <span className="text-center text-sm">Click or drag to upload</span>
+          </div>
+        )}
+
+        {status.state === "uploading" && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+            <span className="animate-pulse text-sm text-white">Uploading...</span>
+          </div>
+        )}
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            void handleFile(file);
+          }
+          event.target.value = "";
+        }}
+      />
+
+      {helperText && <p className="text-xs text-neutral-500">{helperText}</p>}
+
+      {status.state === "done" && (
+        <p className="flex items-center gap-1 font-mono text-xs text-green-400">
+          <CheckCircle size={14} />
+          {status.message}
+        </p>
+      )}
+
+      {status.state === "error" && (
+        <p className="flex items-center gap-1 font-mono text-xs text-red-400">
+          <WarningCircle size={14} />
+          {status.message}
+        </p>
+      )}
+
+      {showBrowser && (
+        <StorageBrowser
+          initialFolder={folder}
+          onSelect={(url) => {
+            onUploaded(url);
+            setStatus({ state: "done", message: "Selected from storage" });
+          }}
+          onClose={() => setShowBrowser(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+async function ensureLeadImage(
+  projectId: string,
+  leadImageUrl: string,
+  currentImages: ProjectWithImages["images"]
+) {
+  if (!leadImageUrl) {
+    return { error: null as string | null };
+  }
+
+  const existing = currentImages.find((image) => image.image_url === leadImageUrl);
+  if (existing) {
+    const orderedIds = [
+      existing.id,
+      ...currentImages.filter((image) => image.id !== existing.id).map((image) => image.id),
+    ];
+    const { error } = await projectImageService.reorder(projectId, orderedIds);
+    return { error: error ? "Failed to update lead image order." : null };
+  }
+
+  const { data, error } = await projectImageService.create({
+    project_id: projectId,
+    image_url: leadImageUrl,
+    sort_order: currentImages.length,
   });
 
-  const handleCreateProject = async () => {
-    if (!formData.title || !formData.slug) {
-      setError("Title and slug are required");
-      return;
-    }
+  if (error || !data) {
+    return { error: "Failed to save lead image." };
+  }
 
-    const { data, error: requestError } = await projectService.create(toProjectPayload());
-    if (requestError || !data) {
-      setError("Failed to create project");
-      return;
-    }
+  const orderedIds = [data.id, ...currentImages.map((image) => image.id)];
+  const reorderResult = await projectImageService.reorder(projectId, orderedIds);
+  return { error: reorderResult.error ? "Failed to order lead image." : null };
+}
 
-    setProjects([...projects, { ...data, images: [] }]);
-    setShowCreateForm(false);
-    resetForm();
+function ProjectForm({
+  mode,
+  project,
+  defaultSortOrder,
+  onSaved,
+  onCancel,
+  onError,
+}: {
+  mode: "create" | "edit";
+  project?: ProjectWithImages;
+  defaultSortOrder: number;
+  onSaved: () => Promise<void>;
+  onCancel: () => void;
+  onError: (message: string) => void;
+}) {
+  const [form, setForm] = useState<ProjectFormState>(() =>
+    project ? getInitialForm(project) : { ...getInitialForm(), sortOrder: defaultSortOrder }
+  );
+  const [saving, setSaving] = useState(false);
+  const [slugTouched, setSlugTouched] = useState(Boolean(project?.slug));
+
+  useEffect(() => {
+    setForm(project ? getInitialForm(project) : { ...getInitialForm(), sortOrder: defaultSortOrder });
+    setSlugTouched(Boolean(project?.slug));
+  }, [defaultSortOrder, project]);
+
+  const setTitle = (title: string) => {
+    setForm((current) => ({
+      ...current,
+      title,
+      slug: slugTouched ? current.slug : slugify(title),
+    }));
   };
 
-  const handleUpdateProject = async () => {
-    if (!editingProject || !formData.title || !formData.slug) {
-      setError("Title and slug are required");
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!form.title.trim() || !form.slug.trim()) {
+      onError("Title and slug are required.");
       return;
     }
 
-    const updates: ProjectUpdateInput = {
-      ...toProjectPayload(),
-      thumbnail_url: editingProject.thumbnail_url,
-      sort_order: editingProject.sort_order,
-    };
-
-    const { error: requestError } = await projectService.update(editingProject.id, updates);
-    if (requestError) {
-      setError("Failed to update project");
+    if (!form.thumbnailUrl) {
+      onError("Thumbnail image is required.");
       return;
     }
 
-    setProjects(
-      projects.map((project) =>
-        project.id === editingProject.id ? { ...project, ...updates } : project
-      )
-    );
-    setEditingProject(null);
-    resetForm();
+    setSaving(true);
+    onError("");
+
+    if (mode === "create") {
+      const { data, error } = await projectService.create({
+        title: form.title.trim(),
+        slug: form.slug.trim(),
+        description: form.description.trim() || null,
+        category: form.category.trim() || null,
+        thumbnail_url: form.thumbnailUrl,
+        featured: form.featured,
+        published: form.published,
+        sort_order: form.sortOrder,
+      });
+
+      if (error || !data) {
+        setSaving(false);
+        onError("Failed to create project.");
+        return;
+      }
+
+      if (form.leadImageUrl) {
+        const leadResult = await ensureLeadImage(data.id, form.leadImageUrl, []);
+        if (leadResult.error) {
+          setSaving(false);
+          onError(leadResult.error);
+          return;
+        }
+      }
+
+      await onSaved();
+      setSaving(false);
+      onCancel();
+      return;
+    }
+
+    if (!project) {
+      setSaving(false);
+      return;
+    }
+
+    const { error } = await projectService.update(project.id, {
+      title: form.title.trim(),
+      slug: form.slug.trim(),
+      description: form.description.trim() || null,
+      category: form.category.trim() || null,
+      thumbnail_url: form.thumbnailUrl,
+      featured: form.featured,
+      published: form.published,
+      sort_order: form.sortOrder,
+    });
+
+    if (error) {
+      setSaving(false);
+      onError("Failed to update project.");
+      return;
+    }
+
+    const leadResult = await ensureLeadImage(project.id, form.leadImageUrl, project.images);
+    if (leadResult.error) {
+      setSaving(false);
+      onError(leadResult.error);
+      return;
+    }
+
+    await onSaved();
+    setSaving(false);
   };
 
-  const handleDeleteProject = async (projectId: string) => {
-    if (!confirm("Are you sure you want to delete this project?")) {
-      return;
-    }
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-5 rounded-lg border border-neutral-700 bg-neutral-900 p-6"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="font-serif text-xl text-white">
+            {mode === "create" ? "New Project" : "Project Details"}
+          </h3>
+          <p className="mt-1 text-sm text-neutral-400">
+            {mode === "create"
+              ? "Create the project record, upload a thumbnail, and set the lead image."
+              : "Update project metadata without leaving the artwork manager."}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-neutral-500 transition-colors duration-200 hover:text-white"
+          aria-label="Close form"
+        >
+          <X size={18} />
+        </button>
+      </div>
 
-    const { error: requestError } = await projectService.delete(projectId);
-    if (requestError) {
-      setError("Failed to delete project");
-      return;
-    }
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <FormField label="Title *">
+          <input
+            value={form.title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Project title"
+            className="w-full rounded border border-neutral-600 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+          />
+        </FormField>
 
-    setProjects(projects.filter((project) => project.id !== projectId));
-  };
+        <FormField label="Slug *">
+          <input
+            value={form.slug}
+            onChange={(event) => {
+              setSlugTouched(true);
+              setForm((current) => ({ ...current, slug: slugify(event.target.value) }));
+            }}
+            placeholder="project-slug"
+            className="w-full rounded border border-neutral-600 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+          />
+        </FormField>
+      </div>
 
-  const handleImageUpload = async (projectId: string, files: FileList) => {
-    setUploadingImages(true);
-    setError("");
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <FormField label="Category">
+          <select
+            value={form.category}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, category: event.target.value }))
+            }
+            className="w-full rounded border border-neutral-600 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+          >
+            {CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </FormField>
+
+        <FormField label="Sort Order">
+          <input
+            type="number"
+            value={form.sortOrder}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                sortOrder: Number(event.target.value) || 0,
+              }))
+            }
+            className="w-full rounded border border-neutral-600 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+          />
+        </FormField>
+      </div>
+
+      <FormField label="Description">
+        <textarea
+          value={form.description}
+          onChange={(event) =>
+            setForm((current) => ({ ...current, description: event.target.value }))
+          }
+          rows={4}
+          placeholder="Short description of the project..."
+          className="w-full resize-none rounded border border-neutral-600 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+        />
+      </FormField>
+
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <ImageUploader
+          label="Thumbnail Image *"
+          folder="thumbnails"
+          value={form.thumbnailUrl}
+          onUploaded={(url) =>
+            setForm((current) => ({
+              ...current,
+              thumbnailUrl: url,
+            }))
+          }
+        />
+        <ImageUploader
+          label="Hero / Lead Image"
+          folder="heroes"
+          value={form.leadImageUrl}
+          helperText="Used as the first gallery image and project-page lead image."
+          onUploaded={(url) =>
+            setForm((current) => ({
+              ...current,
+              leadImageUrl: url,
+            }))
+          }
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-6">
+        <label className="flex cursor-pointer items-center gap-3 select-none">
+          <input
+            type="checkbox"
+            checked={form.featured}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, featured: event.target.checked }))
+            }
+            className="h-4 w-4 rounded border-neutral-600 bg-neutral-800 text-amber-500 focus:ring-amber-500"
+          />
+          <span className="text-sm text-neutral-200">Feature on home page</span>
+        </label>
+
+        <label className="flex cursor-pointer items-center gap-3 select-none">
+          <input
+            type="checkbox"
+            checked={form.published}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, published: event.target.checked }))
+            }
+            className="h-4 w-4 rounded border-neutral-600 bg-neutral-800 text-amber-500 focus:ring-amber-500"
+          />
+          <span className="text-sm text-neutral-200">Published</span>
+        </label>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded border border-neutral-700 px-5 py-2 font-sans text-sm uppercase tracking-widest text-neutral-400 transition-colors duration-300 hover:border-neutral-500"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={saving}
+          className="inline-flex items-center gap-2 rounded bg-amber-600 px-6 py-2 font-sans text-sm uppercase tracking-widest text-white transition-colors duration-300 hover:bg-amber-500 disabled:opacity-50"
+        >
+          <FloppyDisk size={16} />
+          {saving ? "Saving..." : mode === "create" ? "Save Project" : "Update Project"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function GalleryImageUploader({
+  project,
+  onRefresh,
+  onError,
+}: {
+  project: ProjectWithImages;
+  onRefresh: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [showBrowser, setShowBrowser] = useState(false);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [dragOverImageId, setDragOverImageId] = useState<string | null>(null);
+
+  const handleFiles = async (files: FileList) => {
+    setUploading(true);
+    onError("");
 
     try {
-      const currentProject = projects.find((project) => project.id === projectId);
-      const startingOrder = currentProject?.images.length ?? 0;
-      let firstUploadedUrl: string | null = null;
-
-      const uploadPromises = Array.from(files).map(async (file, index) => {
-        const result = await uploadImage(file);
+      const startingOrder = project.images.length;
+      const uploads = Array.from(files).map(async (file, index) => {
+        const result = await uploadImage(file, `gallery/${project.id}`);
         if (!result.success) {
           throw new Error(result.error);
         }
 
-        if (!firstUploadedUrl) {
-          firstUploadedUrl = result.url;
-        }
-
-        const { error: createError } = await projectImageService.create({
-          project_id: projectId,
+        const { error } = await projectImageService.create({
+          project_id: project.id,
           image_url: result.url,
           sort_order: startingOrder + index,
         });
 
-        if (createError) {
-          throw createError;
+        if (error) {
+          throw error;
         }
       });
 
-      await Promise.all(uploadPromises);
-
-      if (firstUploadedUrl && !currentProject?.thumbnail_url) {
-        await projectService.update(projectId, { thumbnail_url: firstUploadedUrl });
-      }
-
-      await loadProjects();
+      await Promise.all(uploads);
+      await onRefresh();
     } catch {
-      setError("Failed to upload images");
+      onError("Failed to upload gallery images.");
     } finally {
-      setUploadingImages(false);
+      setUploading(false);
     }
+  };
+
+  const handleBrowsePick = async (url: string) => {
+    onError("");
+    const { error } = await projectImageService.create({
+      project_id: project.id,
+      image_url: url,
+      sort_order: project.images.length,
+    });
+
+    if (error) {
+      onError("Failed to attach gallery image.");
+      return;
+    }
+
+    await onRefresh();
   };
 
   const handleDeleteImage = async (imageId: string) => {
-    if (!confirm("Are you sure you want to delete this image?")) {
+    if (!confirm("Delete this image from the project gallery?")) {
       return;
     }
 
-    const { error: requestError } = await projectImageService.delete(imageId);
-    if (requestError) {
-      setError("Failed to delete image");
+    const { error } = await projectImageService.delete(imageId);
+    if (error) {
+      onError("Failed to delete image.");
       return;
     }
 
-    await loadProjects();
+    await onRefresh();
   };
 
-  const reorderImages = async (
-    projectId: string,
-    sourceImageId: string,
-    destinationImageId: string
-  ) => {
+  const reorderImages = async (sourceImageId: string, destinationImageId: string) => {
     if (sourceImageId === destinationImageId) {
-      return;
-    }
-
-    const project = projects.find((item) => item.id === projectId);
-    if (!project) {
       return;
     }
 
@@ -208,400 +776,436 @@ export default function AdminPage() {
       return;
     }
 
-    const reorderedImages = [...project.images];
-    const [movedImage] = reorderedImages.splice(sourceIndex, 1);
-    reorderedImages.splice(destinationIndex, 0, movedImage);
+    const reordered = [...project.images];
+    const [moved] = reordered.splice(sourceIndex, 1);
+    reordered.splice(destinationIndex, 0, moved);
 
-    const normalizedImages = reorderedImages.map((image, index) => ({
-      ...image,
-      sort_order: index,
-    }));
-
-    setProjects((currentProjects) =>
-      currentProjects.map((item) =>
-        item.id === projectId ? { ...item, images: normalizedImages } : item
-      )
-    );
-    setSavingImageOrderFor(projectId);
+    setSavingOrder(true);
     setDragState(null);
     setDragOverImageId(null);
 
-    const { error: requestError } = await projectImageService.reorder(
-      projectId,
-      normalizedImages.map((image) => image.id)
+    const { error } = await projectImageService.reorder(
+      project.id,
+      reordered.map((image) => image.id)
     );
 
-    if (requestError) {
-      setError("Failed to save image order");
-      await loadProjects();
+    if (error) {
+      onError("Failed to save image order.");
     }
 
-    setSavingImageOrderFor(null);
+    await onRefresh();
+    setSavingOrder(false);
   };
 
-  const resetForm = () => {
-    setFormData({
-      title: "",
-      slug: "",
-      description: "",
-      category: "",
-      featured: false,
-      published: true,
+  return (
+    <div className="mt-4 flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span className="font-mono text-xs uppercase tracking-widest text-amber-400">
+            Gallery Images ({project.images.length})
+          </span>
+          <p className="mt-1 text-xs text-neutral-500">
+            Drag to reorder. The first image is used as the lead image on project pages.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowBrowser(true)}
+            disabled={uploading || savingOrder}
+            className="inline-flex items-center gap-1.5 rounded border border-neutral-600 bg-neutral-800 px-3 py-1.5 font-sans text-xs uppercase tracking-widest text-neutral-300 transition-colors duration-300 hover:bg-neutral-700 disabled:opacity-50"
+          >
+            <ImageSquare size={14} />
+            Browse Storage
+          </button>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading || savingOrder}
+            className="inline-flex items-center gap-1.5 rounded bg-neutral-700 px-3 py-1.5 font-sans text-xs uppercase tracking-widest text-white transition-colors duration-300 hover:bg-neutral-600 disabled:opacity-50"
+          >
+            <UploadSimple size={14} />
+            {uploading ? "Uploading..." : "Upload New"}
+          </button>
+        </div>
+
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept="image/*"
+          className="hidden"
+          onChange={(event) => {
+            if (event.target.files) {
+              void handleFiles(event.target.files);
+            }
+            event.target.value = "";
+          }}
+        />
+      </div>
+
+      {showBrowser && (
+        <StorageBrowser
+          initialFolder={`gallery/${project.id}`}
+          onSelect={(url) => {
+            void handleBrowsePick(url);
+          }}
+          onClose={() => setShowBrowser(false)}
+        />
+      )}
+
+      {project.images.length > 0 ? (
+        <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
+          {project.images.map((image, index) => {
+            const isDragging = dragState?.imageId === image.id;
+            const isDropTarget = dragOverImageId === image.id;
+
+            return (
+              <div
+                key={image.id}
+                className={`group relative aspect-square overflow-hidden rounded bg-neutral-800 transition-all ${
+                  isDropTarget ? "ring-2 ring-amber-500/70" : ""
+                } ${isDragging ? "opacity-50" : "opacity-100"}`}
+                draggable
+                onDragStart={() => {
+                  setDragState({ imageId: image.id, projectId: project.id });
+                  setDragOverImageId(image.id);
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  if (dragState?.projectId === project.id) {
+                    setDragOverImageId(image.id);
+                  }
+                }}
+                onDragLeave={() => {
+                  if (dragOverImageId === image.id) {
+                    setDragOverImageId(null);
+                  }
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  if (dragState?.projectId === project.id) {
+                    void reorderImages(dragState.imageId, image.id);
+                  }
+                }}
+                onDragEnd={() => {
+                  setDragState(null);
+                  setDragOverImageId(null);
+                }}
+              >
+                <img
+                  src={image.image_url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+                {index === 0 && (
+                  <span className="absolute left-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-amber-300">
+                    Lead
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteImage(image.id)}
+                  className="absolute right-1 top-1 rounded bg-black/70 p-1 text-red-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                  title="Remove image"
+                >
+                  <TrashSimple size={12} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded border border-dashed border-neutral-700 px-4 py-8 text-center text-sm text-neutral-500">
+          No gallery images yet. Upload new artwork or browse the storage bucket.
+        </div>
+      )}
+
+      {savingOrder && (
+        <p className="font-mono text-xs text-amber-400">Saving image order...</p>
+      )}
+    </div>
+  );
+}
+
+function ProjectRow({
+  project,
+  onRefresh,
+  onDelete,
+  onError,
+}: {
+  project: ProjectWithImages;
+  onRefresh: () => Promise<void>;
+  onDelete: (projectId: string) => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const toggleFeatured = async () => {
+    onError("");
+    const { error } = await projectService.update(project.id, {
+      featured: !project.featured,
     });
+
+    if (error) {
+      onError("Failed to update featured state.");
+      return;
+    }
+
+    await onRefresh();
+  };
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900">
+      <div className="flex items-center gap-4 p-4">
+        <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded bg-neutral-800">
+          {project.thumbnail_url ? (
+            <img
+              src={project.thumbnail_url}
+              alt={project.title}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <ImageSquare size={20} className="text-neutral-600" />
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h4 className="truncate font-serif text-white">{project.title}</h4>
+            {project.featured && (
+              <Star size={14} weight="fill" className="flex-shrink-0 text-amber-400" />
+            )}
+          </div>
+          <p className="mt-0.5 font-mono text-xs uppercase tracking-widest text-neutral-400">
+            {project.category || "Uncategorized"}
+          </p>
+          <div className="mt-1 flex items-center gap-3 text-xs text-neutral-500">
+            <span>{project.published ? "Published" : "Draft"}</span>
+            <span>{project.images.length} images</span>
+            <span>Order {project.sort_order}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <button
+            onClick={() => void toggleFeatured()}
+            className={`rounded p-1.5 transition-colors duration-200 ${
+              project.featured
+                ? "text-amber-400 hover:text-amber-300"
+                : "text-neutral-500 hover:text-amber-400"
+            }`}
+            title={project.featured ? "Unfeature" : "Mark as featured"}
+          >
+            <Star size={16} weight={project.featured ? "fill" : "regular"} />
+          </button>
+
+          <button
+            onClick={() => setExpanded((current) => !current)}
+            className="rounded p-1.5 text-neutral-400 transition-colors duration-200 hover:text-white"
+            title="Toggle project details"
+          >
+            {expanded ? <CaretUp size={16} /> : <CaretDown size={16} />}
+          </button>
+
+          {confirmingDelete ? (
+            <>
+              <button
+                onClick={() => void onDelete(project.id)}
+                className="rounded border border-red-800 px-2 py-1 font-mono text-xs text-red-400 transition-colors duration-200 hover:bg-red-900"
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => setConfirmingDelete(false)}
+                className="rounded border border-neutral-700 px-2 py-1 font-mono text-xs text-neutral-400 transition-colors duration-200 hover:bg-neutral-800"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setConfirmingDelete(true)}
+              className="rounded p-1.5 text-neutral-500 transition-colors duration-200 hover:text-red-400"
+              title="Delete project"
+            >
+              <TrashSimple size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="border-t border-neutral-800 px-4 pb-4">
+          <div className="grid grid-cols-1 gap-4 pt-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+            <ProjectForm
+              mode="edit"
+              project={project}
+              defaultSortOrder={project.sort_order}
+              onSaved={onRefresh}
+              onCancel={() => setExpanded(false)}
+              onError={onError}
+            />
+            <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-4">
+              <GalleryImageUploader project={project} onRefresh={onRefresh} onError={onError} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AdminPage() {
+  const { signOut } = useAuth();
+  const [projects, setProjects] = useState<ProjectWithImages[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [error, setError] = useState("");
+
+  const loadProjects = useCallback(async () => {
+    const { data, error: requestError } = await projectService.getAll();
+
+    if (requestError) {
+      setError("Failed to load projects.");
+      setLoading(false);
+      return;
+    }
+
+    setProjects(data ?? []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void loadProjects();
+  }, [loadProjects]);
+
+  const handleDeleteProject = async (projectId: string) => {
+    const { error: requestError } = await projectService.delete(projectId);
+
+    if (requestError) {
+      setError("Failed to delete project.");
+      return;
+    }
+
     setError("");
+    await loadProjects();
   };
-
-  const startEditing = (project: ProjectWithImages) => {
-    setEditingProject(project);
-    setFormData({
-      title: project.title,
-      slug: project.slug,
-      description: project.description || "",
-      category: project.category || "",
-      featured: project.featured,
-      published: project.published,
-    });
-  };
-
-  const categories = [
-    "Photography",
-    "Digital Art",
-    "Mixed Media",
-    "Sculpture",
-    "Installation",
-  ];
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-white"></div>
+      <div className="flex min-h-screen items-center justify-center bg-neutral-950 pt-20">
+        <p className="text-neutral-400">Loading admin panel...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen px-4 py-20">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-4xl font-bold text-white">Admin Dashboard</h1>
+    <div className="min-h-screen bg-neutral-950 pt-20 pb-24">
+      <div className="mx-auto max-w-screen-lg px-6 md:px-10">
+        <div className="flex items-start justify-between gap-4 py-12">
+          <div>
+            <p className="mb-2 font-mono text-xs uppercase tracking-widest text-amber-400">
+              Admin Panel
+            </p>
+            <h1 className="font-serif text-4xl text-white">Portfolio Manager</h1>
+            <p className="mt-2 text-sm text-neutral-400">
+              Upload artwork, set lead images, and manage the portfolio without
+              flattening the presentation layer.
+            </p>
+          </div>
           <button
             onClick={() => void signOut()}
-            className="rounded-lg bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
+            className="mt-1 inline-flex flex-shrink-0 items-center gap-2 rounded border border-neutral-700 px-4 py-2 font-sans text-xs uppercase tracking-widest text-neutral-400 transition-colors duration-300 hover:border-neutral-500 hover:text-neutral-200"
           >
+            <SignOut size={14} />
             Sign Out
           </button>
         </div>
 
         {error && (
-          <div className="mb-6 rounded-lg bg-red-600 p-4 text-white">
-            {error}
-            <button onClick={() => setError("")} className="float-right ml-4">
-              <X size={20} />
+          <div className="mb-6 flex items-start justify-between gap-3 rounded-lg border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+            <span>{error}</span>
+            <button
+              onClick={() => setError("")}
+              className="text-red-400 transition-colors duration-200 hover:text-red-200"
+              aria-label="Dismiss error"
+            >
+              <X size={16} />
             </button>
           </div>
         )}
 
-        <div className="mb-8">
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700"
-          >
-            <Plus size={20} />
-            Create New Project
-          </button>
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="font-serif text-2xl text-white">
+            Projects ({projects.length})
+          </h2>
+          {!showNewForm && (
+            <button
+              onClick={() => setShowNewForm(true)}
+              className="inline-flex items-center gap-2 rounded-md bg-amber-600 px-5 py-2.5 font-sans text-xs uppercase tracking-widest text-white transition-colors duration-300 hover:bg-amber-500"
+            >
+              <Plus size={16} weight="bold" />
+              New Project
+            </button>
+          )}
         </div>
 
-        {(showCreateForm || editingProject) && (
-          <div className="mb-8 rounded-lg bg-gray-800 p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-white">
-                {editingProject ? "Edit Project" : "Create New Project"}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowCreateForm(false);
-                  setEditingProject(null);
-                  resetForm();
-                }}
-                className="text-gray-400 hover:text-white"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <Field label="Title *">
-                <input
-                  type="text"
-                  value={formData.title || ""}
-                  onChange={(event) =>
-                    setFormData({ ...formData, title: event.target.value })
-                  }
-                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white"
-                  required
-                />
-              </Field>
-
-              <Field label="Slug *">
-                <input
-                  type="text"
-                  value={formData.slug || ""}
-                  onChange={(event) =>
-                    setFormData({ ...formData, slug: event.target.value })
-                  }
-                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white"
-                  required
-                />
-              </Field>
-
-              <Field label="Category">
-                <select
-                  value={formData.category || ""}
-                  onChange={(event) =>
-                    setFormData({ ...formData, category: event.target.value })
-                  }
-                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white"
-                >
-                  <option value="">Select category</option>
-                  {categories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-gray-300">
-                  <input
-                    type="checkbox"
-                    checked={formData.featured || false}
-                    onChange={(event) =>
-                      setFormData({ ...formData, featured: event.target.checked })
-                    }
-                    className="rounded"
-                  />
-                  Featured
-                </label>
-
-                <label className="flex items-center gap-2 text-gray-300">
-                  <input
-                    type="checkbox"
-                    checked={formData.published || false}
-                    onChange={(event) =>
-                      setFormData({ ...formData, published: event.target.checked })
-                    }
-                    className="rounded"
-                  />
-                  Published
-                </label>
-              </div>
-
-              <Field label="Description" className="md:col-span-2">
-                <textarea
-                  value={formData.description || ""}
-                  onChange={(event) =>
-                    setFormData({ ...formData, description: event.target.value })
-                  }
-                  rows={4}
-                  className="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white"
-                />
-              </Field>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-4">
-              <button
-                onClick={() => {
-                  setShowCreateForm(false);
-                  setEditingProject(null);
-                  resetForm();
-                }}
-                className="px-4 py-2 text-gray-300 transition-colors hover:text-white"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() =>
-                  void (editingProject ? handleUpdateProject() : handleCreateProject())
-                }
-                className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2 text-white transition-colors hover:bg-green-700"
-              >
-                <FloppyDisk size={20} />
-                {editingProject ? "Update" : "Create"}
-              </button>
-            </div>
+        {showNewForm && (
+          <div className="mb-6">
+            <ProjectForm
+              mode="create"
+              defaultSortOrder={projects.length}
+              onSaved={loadProjects}
+              onCancel={() => setShowNewForm(false)}
+              onError={setError}
+            />
           </div>
         )}
 
-        <div className="space-y-6">
-          {projects.map((project) => (
-            <div key={project.id} className="rounded-lg bg-gray-800 p-6">
-              <div className="mb-4 flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-bold text-white">{project.title}</h3>
-                  <p className="text-gray-400">{project.category || "Uncategorized"}</p>
-                  <div className="mt-2 flex gap-2">
-                    {project.featured && (
-                      <span className="rounded bg-yellow-600 px-2 py-1 text-xs">
-                        Featured
-                      </span>
-                    )}
-                    {project.published ? (
-                      <span className="rounded bg-green-600 px-2 py-1 text-xs">
-                        Published
-                      </span>
-                    ) : (
-                      <span className="rounded bg-red-600 px-2 py-1 text-xs">
-                        Draft
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => startEditing(project)}
-                    className="p-2 text-blue-400 hover:text-blue-300"
-                  >
-                    <PencilSimple size={20} />
-                  </button>
-                  <button
-                    onClick={() => void handleDeleteProject(project.id)}
-                    className="p-2 text-red-400 hover:text-red-300"
-                  >
-                    <TrashSimple size={20} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <div>
-                    <h4 className="text-lg font-medium text-white">
-                      Images ({project.images.length})
-                    </h4>
-                    <p className="mt-1 text-xs uppercase tracking-[0.25em] text-gray-500">
-                      Drag and drop to reorder
-                    </p>
-                  </div>
-                  <div>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={(event) =>
-                        event.target.files &&
-                        void handleImageUpload(project.id, event.target.files)
-                      }
-                      className="hidden"
-                      id={`upload-${project.id}`}
-                      disabled={uploadingImages}
-                    />
-                    <label
-                      htmlFor={`upload-${project.id}`}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-white transition-colors hover:bg-purple-700"
-                    >
-                      <UploadSimple size={16} />
-                      {uploadingImages ? "Uploading..." : "Upload Images"}
-                    </label>
-                  </div>
-                </div>
-
-                {project.images.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                    {project.images.map((image, index) => {
-                      const isDragging = dragState?.imageId === image.id;
-                      const isDropTarget = dragOverImageId === image.id;
-
-                      return (
-                        <div
-                          key={image.id}
-                          className={`group relative rounded-lg border transition-all ${
-                            isDropTarget
-                              ? "border-blue-400 ring-2 ring-blue-500/40"
-                              : "border-transparent"
-                          } ${isDragging ? "opacity-50" : "opacity-100"}`}
-                          draggable
-                          onDragStart={() => {
-                            setDragState({ imageId: image.id, projectId: project.id });
-                            setDragOverImageId(image.id);
-                          }}
-                          onDragOver={(event) => {
-                            event.preventDefault();
-                            if (dragState?.projectId === project.id) {
-                              setDragOverImageId(image.id);
-                            }
-                          }}
-                          onDragLeave={() => {
-                            if (dragOverImageId === image.id) {
-                              setDragOverImageId(null);
-                            }
-                          }}
-                          onDrop={(event) => {
-                            event.preventDefault();
-                            if (dragState?.projectId === project.id) {
-                              void reorderImages(project.id, dragState.imageId, image.id);
-                            }
-                          }}
-                          onDragEnd={() => {
-                            setDragState(null);
-                            setDragOverImageId(null);
-                          }}
-                        >
-                          <img
-                            src={image.image_url}
-                            alt=""
-                            className="h-24 w-full rounded-lg object-cover"
-                          />
-                          <div className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-white">
-                            {index + 1}
-                          </div>
-                          <button
-                            onClick={() => void handleDeleteImage(image.id)}
-                            className="absolute right-1 top-1 rounded bg-red-600 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                          >
-                            <X size={12} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-400">No images uploaded yet</p>
-                )}
-
-                {savingImageOrderFor === project.id && (
-                  <p className="mt-3 text-sm text-blue-300">Saving image order...</p>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {projects.length === 0 && (
-            <div className="py-20 text-center">
-              <p className="text-lg text-gray-400">
-                No projects yet. Create your first project.
-              </p>
-            </div>
-          )}
-        </div>
+        {projects.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {projects.map((project) => (
+              <ProjectRow
+                key={project.id}
+                project={project}
+                onRefresh={loadProjects}
+                onDelete={handleDeleteProject}
+                onError={setError}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-neutral-700 py-16 text-center">
+            <ImageSquare size={40} className="mx-auto mb-3 text-neutral-600" />
+            <p className="text-sm text-neutral-500">
+              No projects yet. Create your first one above.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function Field({
+function FormField({
   label,
   children,
-  className = "",
 }: {
   label: string;
   children: React.ReactNode;
-  className?: string;
 }) {
   return (
-    <div className={className}>
-      <label className="mb-2 block text-sm font-medium text-gray-300">{label}</label>
+    <div className="flex flex-col gap-1">
+      <label className="font-mono text-xs uppercase tracking-widest text-amber-400">
+        {label}
+      </label>
       {children}
     </div>
   );
