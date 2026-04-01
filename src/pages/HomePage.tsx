@@ -1,169 +1,197 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "@phosphor-icons/react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ArrowDown, ArrowRight } from "@phosphor-icons/react";
 import type { Project } from "../types/project";
 import { projects } from "../lib/database";
-import { fallbackArt, projectImage } from "../lib/art";
-import AmbientBackdrop from "../components/AmbientBackdrop";
-import ArtDirectedImage from "../components/ArtDirectedImage";
+import { REFERENCE_MEDIA } from "../lib/referenceMedia";
 import FeaturedGrid from "../components/FeaturedGrid";
 import AboutStrip from "../components/AboutStrip";
 
+gsap.registerPlugin(ScrollTrigger);
+
 export default function HomePage() {
+  const heroTextRef = useRef<HTMLDivElement>(null);
+  const aboutRef = useRef<HTMLDivElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
   const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     projects.getFeatured().then(({ data }) => {
-      if (data) {
-        setFeaturedProjects(data);
-      }
-
+      setFeaturedProjects(data || []);
       setLoading(false);
     });
   }, []);
 
-  const heroProjects = featuredProjects.slice(0, 3);
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      if (heroTextRef.current) {
+        const children = heroTextRef.current.querySelectorAll(".hero-animate");
+        gsap.fromTo(
+          children,
+          { opacity: 0, y: 40 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.8,
+            stagger: 0.15,
+            ease: "power2.out",
+            delay: 0.3,
+          }
+        );
+      }
+
+      if (aboutRef.current) {
+        gsap.fromTo(
+          aboutRef.current,
+          { opacity: 0, y: 30 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            ease: "power2.out",
+            scrollTrigger: { trigger: aboutRef.current, start: "top 80%" },
+          }
+        );
+      }
+
+      if (ctaRef.current) {
+        gsap.fromTo(
+          ctaRef.current,
+          { opacity: 0, y: 30 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            ease: "power2.out",
+            scrollTrigger: { trigger: ctaRef.current, start: "top 80%" },
+          }
+        );
+      }
+    });
+
+    return () => ctx.revert();
+  }, []);
 
   return (
-    <div className="min-h-screen">
-      <section className="relative overflow-hidden px-4 pb-24 pt-28 md:pb-32 md:pt-36">
-        <AmbientBackdrop intensity="strong" />
-        <div className="absolute inset-0 bg-[linear-gradient(125deg,rgba(7,7,8,0.08),rgba(7,7,8,0.58),rgba(7,7,8,0.94))]" />
-        <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
-          <div className="max-w-xl">
-            <p className="text-sm uppercase tracking-[0.36em] text-[#ddb779]">
-              Artist Portfolio
-            </p>
-            <h1 className="mt-6 font-serif text-[clamp(3.6rem,8vw,7.2rem)] leading-[0.94] text-white">
-              Joey Dodd
-            </h1>
-            <p className="mt-7 max-w-lg text-xl font-light leading-8 text-neutral-300">
-              Cinematic illustration, concept-forward image-making, and a portfolio
-              experience designed to let atmosphere carry the first impression.
-            </p>
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-              <Link
-                to="/portfolio"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#e0bc7b] px-8 py-4 text-sm uppercase tracking-[0.28em] text-black transition-transform duration-300 hover:-translate-y-0.5 hover:bg-[#ecc98a]"
-              >
-                View Portfolio
-              </Link>
-              <Link
-                to="/contact"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.03] px-8 py-4 text-sm uppercase tracking-[0.28em] text-white backdrop-blur-sm transition-colors hover:border-white/35 hover:bg-white/[0.06]"
-              >
-                Contact
-              </Link>
-            </div>
-            <div className="mt-12 grid grid-cols-3 gap-4">
-              <HeroStat label="Medium" value="Digital" />
-              <HeroStat label="Focus" value="Worlds" />
-              <HeroStat
-                label="Featured"
-                value={String(featuredProjects.length || 0).padStart(2, "0")}
-              />
-            </div>
-          </div>
+    <>
+      <section
+        id="home"
+        className="relative flex min-h-screen items-center justify-center overflow-hidden"
+        aria-label="Hero section"
+      >
+        <video
+          src={REFERENCE_MEDIA.heroVideo}
+          poster={REFERENCE_MEDIA.heroPoster}
+          className="absolute inset-0 h-full w-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+          aria-hidden="true"
+        />
+        <div
+          className="absolute inset-0 bg-video-overlay"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)",
+          }}
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0 bg-background/50" aria-hidden="true" />
 
-          <div className="relative h-[34rem] md:h-[42rem]">
-            <div className="absolute inset-0 rounded-[2.25rem] border border-white/10 bg-white/[0.03] backdrop-blur-[2px]" />
-            <div className="float-slow absolute left-[4%] top-[8%] h-[72%] w-[42%] overflow-hidden rounded-[1.9rem] border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
-              <ArtDirectedImage
-                src={heroProjects[0] ? projectImage(heroProjects[0], 0) : fallbackArt(0)}
-                fallback={fallbackArt(0)}
-                alt={heroProjects[0]?.title || "Atmospheric artwork"}
-                loading="eager"
-              />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08),rgba(0,0,0,0.72))]" />
-            </div>
-            <div className="float-delay absolute right-[4%] top-0 h-[48%] w-[45%] overflow-hidden rounded-[1.7rem] border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
-              <ArtDirectedImage
-                src={heroProjects[1] ? projectImage(heroProjects[1], 1) : fallbackArt(1)}
-                fallback={fallbackArt(1)}
-                alt={heroProjects[1]?.title || "Portfolio texture"}
-                loading="eager"
-              />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),rgba(0,0,0,0.7))]" />
-            </div>
-            <div className="absolute bottom-[4%] right-[10%] h-[42%] w-[52%] overflow-hidden rounded-[1.8rem] border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
-              <ArtDirectedImage
-                src={heroProjects[2] ? projectImage(heroProjects[2], 2) : fallbackArt(2)}
-                fallback={fallbackArt(2)}
-                alt={heroProjects[2]?.title || "Illustration background"}
-                loading="eager"
-              />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),rgba(0,0,0,0.84))]" />
-            </div>
-            <div className="absolute bottom-[7%] left-[14%] rounded-full border border-white/15 bg-black/55 px-5 py-3 backdrop-blur-md">
-              <p className="text-[11px] uppercase tracking-[0.32em] text-[#e4be7a]">
-                Atmospheric Illustration
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="relative px-4 py-24 md:py-32">
-        <AmbientBackdrop intensity="soft" />
-        <div className="relative mx-auto max-w-7xl">
-          <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.36em] text-[#ddb779]">
-                Featured Work
-              </p>
-              <h2 className="mt-4 max-w-2xl font-serif text-4xl text-white md:text-5xl">
-                A curated front row for the newest and most representative work.
-              </h2>
-            </div>
+        <div
+          ref={heroTextRef}
+          className="relative z-10 mx-auto max-w-4xl px-6 text-center md:px-10"
+        >
+          <p className="hero-animate mb-4 font-mono text-sm uppercase tracking-widest text-tertiary">
+            Visual Artist &amp; Illustrator
+          </p>
+          <h1
+            className="hero-animate mb-6 font-serif text-5xl leading-tight text-hero-text md:text-7xl lg:text-8xl"
+            style={{ letterSpacing: "-0.025em" }}
+          >
+            Joey Dodd
+          </h1>
+          <p className="hero-animate mx-auto mb-10 max-w-xl font-sans text-body-lg font-light text-hero-text/80 md:text-xl">
+            Crafting worlds through character, concept, and illustration, where
+            imagination meets craft.
+          </p>
+          <div className="hero-animate flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
               to="/portfolio"
-              className="inline-flex items-center gap-3 text-sm uppercase tracking-[0.28em] text-white/80 transition-colors hover:text-white"
+              className="inline-flex items-center gap-2 rounded-md bg-cta-primary-bg px-8 py-4 font-sans text-label font-normal uppercase tracking-widest text-cta-primary-fg transition-colors duration-300 hover:bg-tertiary focus-visible:outline-2 focus-visible:outline-ring"
             >
-              Browse all work
-              <ArrowRight size={18} />
+              Explore Portfolio
+              <ArrowRight size={18} weight="regular" />
             </Link>
           </div>
+        </div>
 
-          <FeaturedGrid projects={featuredProjects} loading={loading} />
+        <div
+          className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2 animate-bounce"
+          aria-hidden="true"
+        >
+          <ArrowDown size={24} weight="light" className="text-hero-text/50" />
         </div>
       </section>
 
-      <AboutStrip projects={featuredProjects} />
+      <section
+        id="featured"
+        className="bg-background px-6 py-24 md:px-10 md:py-32"
+        aria-label="Featured work"
+      >
+        <div className="mx-auto max-w-screen-xl">
+          <div className="mb-12">
+            <p className="mb-3 font-mono text-sm uppercase tracking-widest text-tertiary">
+              Selected Work
+            </p>
+            <h2 className="font-serif text-h2 text-foreground md:text-4xl">
+              Featured Projects
+            </h2>
+          </div>
+          <FeaturedGrid projects={featuredProjects} isPending={loading} />
+        </div>
+      </section>
 
-      <section className="relative overflow-hidden px-4 py-24 md:py-28">
-        <AmbientBackdrop intensity="medium" />
-        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] px-8 py-12 md:px-12 md:py-16">
-          <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(227,190,122,0.16),rgba(10,10,12,0)_36%,rgba(10,10,12,0.88))]" />
-          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-sm uppercase tracking-[0.35em] text-[#ddb779]">Next Project</p>
-              <h2 className="mt-4 font-serif text-4xl text-white md:text-5xl">
-                Ready to build something textured, dramatic, and memorable.
-              </h2>
-              <p className="mt-5 max-w-xl text-lg leading-8 text-neutral-300">
-                Commission inquiries, collaborations, and selected freelance projects
-                are welcome. The contact flow stays simple; the presentation does not.
-              </p>
-            </div>
+      <div ref={aboutRef} id="about">
+        <AboutStrip />
+      </div>
+
+      <section
+        ref={ctaRef}
+        className="bg-gradient-1 px-6 py-24 md:px-10 md:py-32"
+        aria-label="Call to action"
+      >
+        <div className="mx-auto flex max-w-screen-xl flex-col items-center justify-between gap-8 md:flex-row">
+          <div>
+            <h2 className="mb-3 font-serif text-h2 text-foreground md:text-4xl">
+              Ready to collaborate?
+            </h2>
+            <p className="max-w-md font-sans text-body-lg font-light text-neutral-300">
+              Browse the full portfolio or reach out to discuss your next
+              project.
+            </p>
+          </div>
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <Link
+              to="/portfolio"
+              className="inline-flex items-center gap-2 rounded-md bg-cta-primary-bg px-8 py-4 font-sans text-label font-normal uppercase tracking-widest text-cta-primary-fg transition-colors duration-300 hover:bg-tertiary"
+            >
+              Full Portfolio
+              <ArrowRight size={18} weight="regular" />
+            </Link>
             <Link
               to="/contact"
-              className="inline-flex items-center justify-center rounded-full bg-[#e0bc7b] px-8 py-4 text-sm uppercase tracking-[0.28em] text-black transition-transform duration-300 hover:-translate-y-0.5 hover:bg-[#ecc98a]"
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-cta-secondary-bg px-8 py-4 font-sans text-label font-normal uppercase tracking-widest text-cta-secondary-fg transition-colors duration-300 hover:border-tertiary hover:text-tertiary"
             >
-              Start a Conversation
+              Get in Touch
             </Link>
           </div>
         </div>
       </section>
-    </div>
-  );
-}
-
-function HeroStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 backdrop-blur-sm">
-      <p className="text-[10px] uppercase tracking-[0.28em] text-[#ddb779]">{label}</p>
-      <p className="mt-2 text-lg font-medium text-white">{value}</p>
-    </div>
+    </>
   );
 }

@@ -31,73 +31,10 @@ body {
   font-family: "DM Sans", sans-serif;
   font-weight: 300;
   scroll-behavior: smooth;
-  background-image:
-    radial-gradient(circle at top, rgba(191, 145, 69, 0.14), transparent 32%),
-    radial-gradient(circle at 15% 65%, rgba(54, 79, 92, 0.18), transparent 26%),
-    linear-gradient(180deg, rgba(9, 9, 10, 1), rgba(11, 11, 12, 1));
 }
 
 * {
   box-sizing: border-box;
-}
-
-a,
-button,
-input,
-textarea,
-select {
-  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-::selection {
-  background: rgba(228, 190, 122, 0.28);
-  color: hsl(40, 20%, 96%);
-}
-
-#app {
-  isolation: isolate;
-}
-
-.shimmer {
-  position: relative;
-  overflow: hidden;
-  background:
-    linear-gradient(140deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.06)),
-    linear-gradient(135deg, rgba(222, 184, 120, 0.08), rgba(22, 24, 30, 0.22));
-}
-
-.shimmer::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-  animation: shimmer-pan 2.8s infinite;
-}
-
-.float-slow {
-  animation: drift-vertical 14s ease-in-out infinite;
-}
-
-.float-delay {
-  animation: drift-vertical 16s ease-in-out infinite;
-  animation-delay: -6s;
-}
-
-@keyframes shimmer-pan {
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-@keyframes drift-vertical {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(0, -14px, 0);
-  }
 }
 
 @layer base {

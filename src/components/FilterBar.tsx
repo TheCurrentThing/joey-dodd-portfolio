@@ -1,4 +1,7 @@
-type FilterBarProps = {
+import { useEffect, useRef } from "react";
+import { gsap } from "gsap";
+
+type Props = {
   categories: string[];
   activeCategory: string;
   onSelect: (category: string) => void;
@@ -8,21 +11,43 @@ export default function FilterBar({
   categories,
   activeCategory,
   onSelect,
-}: FilterBarProps) {
+}: Props) {
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!barRef.current) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        barRef.current!.querySelectorAll(".filter-btn"),
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, ease: "power2.out" }
+      );
+    });
+
+    return () => ctx.revert();
+  }, [categories]);
+
   return (
-    <div className="mb-14 flex flex-wrap gap-3">
+    <div
+      ref={barRef}
+      className="mb-10 flex flex-wrap gap-3 overflow-x-auto pb-2"
+      role="group"
+      aria-label="Filter projects by category"
+    >
       {categories.map((category) => {
-        const active = category === activeCategory;
+        const isActive = category === activeCategory;
 
         return (
           <button
             key={category}
             onClick={() => onSelect(category)}
-            className={`rounded-full border px-5 py-3 text-xs uppercase tracking-[0.28em] transition-all duration-300 ${
-              active
-                ? "border-[#deb878] bg-[#deb878] text-black shadow-[0_0_30px_rgba(222,184,120,0.18)]"
-                : "border-white/10 bg-white/[0.03] text-neutral-300 hover:border-white/25 hover:bg-white/[0.06] hover:text-white"
+            className={`filter-btn cursor-pointer whitespace-nowrap rounded-md border px-5 py-3 font-mono text-xs uppercase tracking-widest transition-colors duration-300 ${
+              isActive
+                ? "border-tertiary bg-tertiary text-tertiary-foreground"
+                : "border-border bg-transparent text-neutral-300 hover:border-tertiary hover:text-tertiary"
             }`}
+            aria-pressed={isActive}
           >
             {category}
           </button>

@@ -1,105 +1,140 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { gsap } from "gsap";
 import type { Project } from "../types/project";
 import { projects } from "../lib/database";
-import AmbientBackdrop from "../components/AmbientBackdrop";
-import FilterBar from "../components/FilterBar";
 import ProjectCard from "../components/ProjectCard";
+import FilterBar from "../components/FilterBar";
 
 const ALL_CATEGORY = "All";
 
 export default function PortfolioPage() {
-  const [allProjects, setAllProjects] = useState<Project[]>([]);
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [activeCategory, setActiveCategory] = useState(ALL_CATEGORY);
-  const [loading, setLoading] = useState(true);
+  const [projectsData, setProjectsData] = useState<Project[]>([]);
+  const [isPending, setIsPending] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    projects.getAll().then(({ data }) => {
-      if (data) {
-        setAllProjects(data);
-        setFilteredProjects(data);
+    projects.getAll().then(({ data, error: requestError }) => {
+      if (requestError) {
+        setError(requestError.message || "Unknown error");
+      } else {
+        setProjectsData(data || []);
       }
-
-      setLoading(false);
+      setIsPending(false);
     });
   }, []);
-
-  useEffect(() => {
-    if (activeCategory === ALL_CATEGORY) {
-      setFilteredProjects(allProjects);
-      return;
-    }
-
-    setFilteredProjects(
-      allProjects.filter((project) => project.category === activeCategory)
-    );
-  }, [activeCategory, allProjects]);
 
   const categories = [
     ALL_CATEGORY,
     ...Array.from(
       new Set(
-        allProjects
+        projectsData
           .map((project) => project.category)
           .filter((category): category is string => Boolean(category))
       )
     ),
   ];
 
+  const filtered =
+    activeCategory === ALL_CATEGORY
+      ? projectsData
+      : projectsData.filter((project) => project.category === activeCategory);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      if (headerRef.current) {
+        gsap.fromTo(
+          headerRef.current.querySelectorAll(".header-animate"),
+          { opacity: 0, y: 30 },
+          { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }
+        );
+      }
+    });
+
+    return () => ctx.revert();
+  }, []);
+
+  useEffect(() => {
+    if (!gridRef.current || isPending) return;
+
+    const ctx = gsap.context(() => {
+      const cards = gridRef.current!.querySelectorAll(".project-card");
+      gsap.fromTo(
+        cards,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.5, stagger: 0.07, ease: "power2.out" }
+      );
+    });
+
+    return () => ctx.revert();
+  }, [filtered, isPending]);
+
   return (
-    <div className="min-h-screen overflow-hidden pt-24">
-      <section className="relative px-4 pb-12 pt-8 md:pb-16 md:pt-12">
-        <AmbientBackdrop intensity="strong" />
-        <div className="relative mx-auto max-w-7xl">
-          <div className="max-w-3xl">
-            <p className="text-sm uppercase tracking-[0.36em] text-[#ddb779]">All Work</p>
-            <h1 className="mt-5 font-serif text-[clamp(3rem,7vw,5.6rem)] leading-[0.96] text-white">
-              Portfolio
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-300 md:text-xl">
-              A gallery-oriented view of illustration, concept work, and image-led
-              storytelling. Filter by category, but keep the art doing most of the talking.
+    <div className="min-h-screen bg-background pt-24">
+      <div className="mx-auto max-w-screen-xl px-6 md:px-10">
+        <div ref={headerRef} className="py-16 md:py-20">
+          <p className="header-animate mb-3 font-mono text-sm uppercase tracking-widest text-tertiary">
+            All Work
+          </p>
+          <h1 className="header-animate mb-6 font-serif text-h1 text-foreground md:text-5xl">
+            Portfolio
+          </h1>
+          <p className="header-animate max-w-xl font-sans text-body-lg font-light text-neutral-300">
+            A collection of character designs, illustrations, concept art, and
+            more.
+          </p>
+        </div>
+
+        <FilterBar
+          categories={categories}
+          activeCategory={activeCategory}
+          onSelect={setActiveCategory}
+        />
+
+        {isPending && (
+          <div className="py-32 text-center">
+            <p className="font-sans text-body-lg text-neutral-400">
+              Loading projects...
             </p>
           </div>
-        </div>
-      </section>
+        )}
 
-      <section className="relative px-4 pb-24 md:pb-32">
-        <div className="mx-auto max-w-7xl">
-          <FilterBar
-            categories={categories}
-            activeCategory={activeCategory}
-            onSelect={setActiveCategory}
-          />
+        {error && (
+          <div className="py-32 text-center">
+            <p className="font-sans text-body-lg text-warning">
+              Error loading projects: {error}
+            </p>
+          </div>
+        )}
 
-          {loading ? (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 9 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.04]"
-                >
-                  <div className="aspect-[4/5] shimmer" />
-                </div>
-              ))}
-            </div>
-          ) : filteredProjects.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {filteredProjects.map((project, index) => (
-                <ProjectCard key={project.id} project={project} index={index} />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] px-8 py-24 text-center">
-              <p className="text-lg text-neutral-300">
-                {activeCategory === ALL_CATEGORY
-                  ? "No projects found."
-                  : `No projects found in ${activeCategory}.`}
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
+        {!isPending && !error && (
+          <div
+            ref={gridRef}
+            className="grid grid-cols-1 gap-6 pb-32 md:grid-cols-2 lg:grid-cols-3"
+            role="list"
+            aria-label="Portfolio projects"
+          >
+            {filtered.map((project) => (
+              <div key={project.id} role="listitem" className="project-card">
+                <ProjectCard project={project} />
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <div className="col-span-3 py-24 text-center">
+                <p className="font-sans text-body-lg text-neutral-400">
+                  No projects in this category yet.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

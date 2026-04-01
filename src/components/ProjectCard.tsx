@@ -1,57 +1,57 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { Project } from "../types/project";
-import ArtDirectedImage from "./ArtDirectedImage";
-import { fallbackArt, projectImage } from "../lib/art";
+import { REFERENCE_MEDIA } from "../lib/referenceMedia";
 
-type ProjectCardProps = {
+type Props = {
   project: Project;
-  index?: number;
-  aspect?: "portrait" | "square";
 };
 
-export default function ProjectCard({
-  project,
-  index = 0,
-  aspect = "portrait",
-}: ProjectCardProps) {
-  const image = projectImage(project, index);
-  const ratioClass = aspect === "square" ? "aspect-square" : "aspect-[4/5]";
+export default function ProjectCard({ project }: Props) {
+  const navigate = useNavigate();
+  const imgSrc =
+    project.thumbnail_url ||
+    REFERENCE_MEDIA.fallbackImages[
+      Math.abs(project.id.charCodeAt(0)) % REFERENCE_MEDIA.fallbackImages.length
+    ];
 
   return (
-    <Link
-      to={`/portfolio/${project.slug}`}
-      className="group block focus-visible:outline-none"
-      aria-label={`${project.title} ${project.category ? `in ${project.category}` : ""}`}
+    <article
+      className="group relative aspect-[4/5] cursor-pointer overflow-hidden rounded-md bg-secondary"
+      onClick={() => navigate(`/portfolio/${project.slug}`)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          navigate(`/portfolio/${project.slug}`);
+        }
+      }}
+      tabIndex={0}
+      aria-label={`${project.title} - ${project.category || "Uncategorized"}`}
+      role="article"
     >
-      <article className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0d0d0f] shadow-[0_20px_80px_rgba(0,0,0,0.35)] transition-transform duration-500 group-hover:-translate-y-1.5">
-        <div className={`relative ${ratioClass} overflow-hidden`}>
-          <ArtDirectedImage
-            src={image}
-            fallback={fallbackArt(index)}
-            alt={project.title}
-            imgClassName="transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-          />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0)_18%,rgba(0,0,0,0.22)_45%,rgba(0,0,0,0.92)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(250,221,167,0.16),transparent_35%)] opacity-70 transition-opacity duration-500 group-hover:opacity-100" />
-          <div className="absolute left-5 top-5">
-            <span className="rounded-full border border-white/15 bg-black/45 px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-[#f2d8a4] backdrop-blur-sm">
-              {project.category || "Selected Work"}
-            </span>
-          </div>
-          <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
-            <div className="translate-y-3 transition-transform duration-500 group-hover:translate-y-0">
-              <h3 className="font-serif text-[1.65rem] leading-tight text-white drop-shadow-[0_5px_20px_rgba(0,0,0,0.55)]">
-                {project.title}
-              </h3>
-              {project.description && (
-                <p className="mt-3 max-w-md text-sm font-light leading-6 text-white/72 opacity-0 transition-all duration-500 group-hover:opacity-100">
-                  {project.description}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </article>
-    </Link>
+      <img
+        src={imgSrc}
+        alt={project.title}
+        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+        loading="lazy"
+      />
+      <div
+        className="absolute inset-0 opacity-0 transition-opacity duration-400 group-hover:opacity-95"
+        style={{
+          background:
+            "linear-gradient(90deg, hsl(35, 25%, 20%) 0%, hsl(30, 25%, 10%) 100%)",
+        }}
+        aria-hidden="true"
+      />
+      <div className="absolute inset-0 flex flex-col justify-end p-6 opacity-0 transition-opacity duration-400 group-hover:opacity-100">
+        <span className="mb-2 font-mono text-xs uppercase tracking-widest text-tertiary">
+          {project.category || "Uncategorized"}
+        </span>
+        <h3 className="font-serif text-h3 text-foreground">{project.title}</h3>
+        {project.description && (
+          <p className="mt-2 font-sans text-body font-light text-neutral-200 line-clamp-2">
+            {project.description}
+          </p>
+        )}
+      </div>
+    </article>
   );
 }
