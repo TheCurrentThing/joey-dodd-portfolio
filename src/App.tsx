@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { SUPABASE_CONFIG_ERROR } from "./lib/supabase";
 import HomePage from "./pages/HomePage";
 import PortfolioPage from "./pages/PortfolioPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
@@ -37,6 +38,22 @@ function AppContent() {
 }
 
 export default function App() {
+  if (SUPABASE_CONFIG_ERROR) {
+    return (
+      <div className="min-h-screen bg-gray-950 px-6 py-24 text-white">
+        <div className="mx-auto max-w-2xl rounded-2xl border border-red-500/30 bg-red-950/30 p-8">
+          <p className="text-sm uppercase tracking-[0.3em] text-red-300">Configuration Error</p>
+          <h1 className="mt-4 text-3xl font-bold">Supabase environment variables are missing</h1>
+          <p className="mt-4 text-lg text-gray-200">
+            Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>
+            {" "}in the deployment environment, then redeploy.
+          </p>
+          <p className="mt-3 text-sm text-gray-300">{SUPABASE_CONFIG_ERROR}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AuthProvider>
       <BrowserRouter>
