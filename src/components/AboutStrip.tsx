@@ -43,7 +43,7 @@ export default function AboutStrip() {
           <div className="about-animate order-2 overflow-hidden rounded-md md:order-1">
             <img
               src={REFERENCE_MEDIA.aboutPortrait}
-              alt="Artist portrait in studio"
+              alt="Digital tablet and stylus on an artist's desk"
               className="h-80 w-full object-cover object-top md:h-[500px]"
               loading="lazy"
             />

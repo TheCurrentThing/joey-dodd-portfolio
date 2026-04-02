@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { gsap } from "gsap";
 import { ArrowLeft, ArrowSquareOut } from "@phosphor-icons/react";
+import MediaLightbox from "../components/MediaLightbox";
 import { projectService } from "../lib/database";
 import { isVideoUrl } from "../lib/media";
 import { useState } from "react";
@@ -19,10 +20,12 @@ function MediaBlock({
   src,
   alt,
   hero = false,
+  preview = false,
 }: {
   src: string;
   alt: string;
   hero?: boolean;
+  preview?: boolean;
 }) {
   if (isVideoUrl(src)) {
     return hero ? (
@@ -34,6 +37,15 @@ function MediaBlock({
         muted
         playsInline
         controls={false}
+      />
+    ) : preview ? (
+      <video
+        src={src}
+        className="h-auto w-full object-cover"
+        autoPlay
+        loop
+        muted
+        playsInline
       />
     ) : (
       <video
@@ -64,6 +76,7 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<DetailProject | null>(null);
   const [projectPending, setProjectPending] = useState(true);
   const [projectError, setProjectError] = useState<string | null>(null);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) {
@@ -165,6 +178,13 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="min-h-screen bg-background pt-20">
+      <MediaLightbox
+        src={lightboxSrc || ""}
+        alt={project.title}
+        open={Boolean(lightboxSrc)}
+        onClose={() => setLightboxSrc(null)}
+      />
+
       <div
         ref={heroRef}
         className="relative h-[60vh] w-full overflow-hidden md:h-[75vh]"
@@ -236,9 +256,14 @@ export default function ProjectDetailPage() {
             <h2 className="mb-8 font-serif text-h3 text-foreground">Gallery</h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {galleryImages.map((image) => (
-                <div key={image.id} className="overflow-hidden rounded-md bg-secondary">
-                  <MediaBlock src={image.image_url} alt={project.title} />
-                </div>
+                <button
+                  key={image.id}
+                  type="button"
+                  onClick={() => setLightboxSrc(image.image_url)}
+                  className="overflow-hidden rounded-md bg-secondary text-left transition-transform duration-300 hover:scale-[1.01]"
+                >
+                  <MediaBlock src={image.image_url} alt={project.title} preview />
+                </button>
               ))}
             </div>
           </div>
@@ -251,9 +276,14 @@ export default function ProjectDetailPage() {
             </h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {processImages.map((image) => (
-                <div key={image.id} className="overflow-hidden rounded-md bg-secondary">
-                  <MediaBlock src={image.image_url} alt="Process shot" />
-                </div>
+                <button
+                  key={image.id}
+                  type="button"
+                  onClick={() => setLightboxSrc(image.image_url)}
+                  className="overflow-hidden rounded-md bg-secondary text-left transition-transform duration-300 hover:scale-[1.01]"
+                >
+                  <MediaBlock src={image.image_url} alt="Process shot" preview />
+                </button>
               ))}
             </div>
           </div>
