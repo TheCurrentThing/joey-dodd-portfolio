@@ -15,6 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAuth } from "../hooks/useAuth";
 import { projectImageService, projectService } from "../lib/database";
+import { isVideoUrl, uniqueMediaUrls } from "../lib/media";
 import { getPublicUrl, listImages, uploadImage } from "../lib/storage";
 import type { ProjectWithImages } from "../types/project";
 
@@ -55,6 +56,11 @@ type ProjectFormState = {
   featured: boolean;
   published: boolean;
   sortOrder: number;
+};
+
+type MediaUploadItem = {
+  id: string;
+  url: string;
 };
 
 function slugify(value: string) {
@@ -202,7 +208,7 @@ function StorageBrowser({
             <div className="flex flex-col items-center justify-center gap-3 py-16 text-neutral-500">
               <ImageSquare size={40} />
               <p className="text-sm">
-                No images found in{" "}
+                No media found in{" "}
                 <code className="font-mono text-amber-400">/{folder}</code>
               </p>
               {folder !== "projects" && (
@@ -229,12 +235,22 @@ function StorageBrowser({
                   className="group relative aspect-square overflow-hidden rounded bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   title={file.name}
                 >
-                  <img
-                    src={file.publicUrl}
-                    alt={file.name}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    loading="lazy"
-                  />
+                  {isVideoUrl(file.publicUrl) ? (
+                    <video
+                      src={file.publicUrl}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                  ) : (
+                    <img
+                      src={file.publicUrl}
+                      alt={file.name}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  )}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/40">
                     <CheckCircle
                       size={28}
@@ -260,12 +276,14 @@ function ImageUploader({
   folder,
   value,
   helperText,
+  accept = "image/*",
   onUploaded,
 }: {
   label: string;
   folder: string;
   value: string;
   helperText?: string;
+  accept?: string;
   onUploaded: (url: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -314,11 +332,22 @@ function ImageUploader({
         }}
       >
         {value ? (
-          <img
-            src={value}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-          />
+          isVideoUrl(value) ? (
+            <video
+              src={value}
+              className="absolute inset-0 h-full w-full object-cover"
+              muted
+              loop
+              autoPlay
+              playsInline
+            />
+          ) : (
+            <img
+              src={value}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )
         ) : (
           <div className="flex flex-col items-center gap-2 p-4 text-neutral-500">
             <ImageSquare size={32} />
@@ -336,7 +365,7 @@ function ImageUploader({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={accept}
         className="hidden"
         onChange={(event) => {
           const file = event.target.files?.[0];
@@ -393,7 +422,7 @@ async function ensureLeadImage(
       ...currentImages.filter((image) => image.id !== existing.id).map((image) => image.id),
     ];
     const { error } = await projectImageService.reorder(projectId, orderedIds);
-    return { error: error ? "Failed to update lead image order." : null };
+    return { error: error ? "Failed to update lead media order." : null };
   }
 
   const { data, error } = await projectImageService.create({
@@ -403,12 +432,175 @@ async function ensureLeadImage(
   });
 
   if (error || !data) {
-    return { error: "Failed to save lead image." };
+    return { error: "Failed to save lead media." };
   }
 
   const orderedIds = [data.id, ...currentImages.map((image) => image.id)];
   const reorderResult = await projectImageService.reorder(projectId, orderedIds);
-  return { error: reorderResult.error ? "Failed to order lead image." : null };
+  return { error: reorderResult.error ? "Failed to order lead media." : null };
+}
+
+function MediaTile({
+  url,
+  badge,
+  onRemove,
+}: {
+  url: string;
+  badge?: string;
+  onRemove?: () => void;
+}) {
+  return (
+    <div className="group relative aspect-square overflow-hidden rounded bg-neutral-800">
+      {isVideoUrl(url) ? (
+        <video
+          src={url}
+          className="h-full w-full object-cover"
+          muted
+          loop
+          autoPlay
+          playsInline
+        />
+      ) : (
+        <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+      )}
+      {badge && (
+        <span className="absolute left-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-amber-300">
+          {badge}
+        </span>
+      )}
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="absolute right-1 top-1 rounded bg-black/70 p-1 text-red-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          title="Remove media"
+        >
+          <TrashSimple size={12} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function PendingMediaUploader({
+  items,
+  onChange,
+  onError,
+}: {
+  items: MediaUploadItem[];
+  onChange: (items: MediaUploadItem[]) => void;
+  onError: (message: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [showBrowser, setShowBrowser] = useState(false);
+
+  const addUrls = (urls: string[]) => {
+    const next = uniqueMediaUrls([...items.map((item) => item.url), ...urls]).map((url) => ({
+      id: url,
+      url,
+    }));
+    onChange(next);
+  };
+
+  const handleFiles = async (files: FileList) => {
+    setUploading(true);
+    onError("");
+
+    try {
+      const uploads = await Promise.all(
+        Array.from(files).map(async (file) => {
+          const result = await uploadImage(file, "gallery/uploads");
+          if (!result.success) {
+            throw new Error(result.error);
+          }
+
+          return result.url;
+        })
+      );
+
+      addUrls(uploads);
+    } catch {
+      onError("Failed to upload gallery media.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span className="font-mono text-xs uppercase tracking-widest text-amber-400">
+            Gallery Media ({items.length})
+          </span>
+          <p className="mt-1 text-xs text-neutral-500">
+            Add multiple images or videos now, or add more after the project is created.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowBrowser(true)}
+            disabled={uploading}
+            className="inline-flex items-center gap-1.5 rounded border border-neutral-600 bg-neutral-800 px-3 py-1.5 font-sans text-xs uppercase tracking-widest text-neutral-300 transition-colors duration-300 hover:bg-neutral-700 disabled:opacity-50"
+          >
+            <ImageSquare size={14} />
+            Browse Storage
+          </button>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex items-center gap-1.5 rounded bg-neutral-700 px-3 py-1.5 font-sans text-xs uppercase tracking-widest text-white transition-colors duration-300 hover:bg-neutral-600 disabled:opacity-50"
+          >
+            <UploadSimple size={14} />
+            {uploading ? "Uploading..." : "Upload Media"}
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            accept="image/*,video/*"
+            className="hidden"
+            onChange={(event) => {
+              if (event.target.files) {
+                void handleFiles(event.target.files);
+              }
+              event.target.value = "";
+            }}
+          />
+        </div>
+      </div>
+
+      {showBrowser && (
+        <StorageBrowser
+          initialFolder="projects"
+          onSelect={(url) => addUrls([url])}
+          onClose={() => setShowBrowser(false)}
+        />
+      )}
+
+      {items.length > 0 ? (
+        <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
+          {items.map((item, index) => (
+            <MediaTile
+              key={item.id}
+              url={item.url}
+              badge={index === 0 ? "1" : undefined}
+              onRemove={() =>
+                onChange(items.filter((existingItem) => existingItem.id !== item.id))
+              }
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded border border-dashed border-neutral-700 px-4 py-8 text-center text-sm text-neutral-500">
+          No gallery media queued yet.
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ProjectForm({
@@ -429,13 +621,23 @@ function ProjectForm({
   const [form, setForm] = useState<ProjectFormState>(() =>
     project ? getInitialForm(project) : { ...getInitialForm(), sortOrder: defaultSortOrder }
   );
+  const [pendingMediaItems, setPendingMediaItems] = useState<MediaUploadItem[]>(() =>
+    mode === "create"
+      ? []
+      : (project?.images ?? []).map((image) => ({ id: image.id, url: image.image_url }))
+  );
   const [saving, setSaving] = useState(false);
   const [slugTouched, setSlugTouched] = useState(Boolean(project?.slug));
 
   useEffect(() => {
     setForm(project ? getInitialForm(project) : { ...getInitialForm(), sortOrder: defaultSortOrder });
+    setPendingMediaItems(
+      mode === "create"
+        ? []
+        : (project?.images ?? []).map((image) => ({ id: image.id, url: image.image_url }))
+    );
     setSlugTouched(Boolean(project?.slug));
-  }, [defaultSortOrder, project]);
+  }, [defaultSortOrder, mode, project]);
 
   const setTitle = (title: string) => {
     setForm((current) => ({
@@ -479,12 +681,24 @@ function ProjectForm({
         return;
       }
 
-      if (form.leadImageUrl) {
-        const leadResult = await ensureLeadImage(data.id, form.leadImageUrl, []);
-        if (leadResult.error) {
-          setSaving(false);
-          onError(leadResult.error);
-          return;
+      const mediaUrls = uniqueMediaUrls([
+        form.leadImageUrl,
+        ...pendingMediaItems.map((item) => item.url),
+      ]);
+
+      if (mediaUrls.length > 0) {
+        for (const [index, mediaUrl] of mediaUrls.entries()) {
+          const { error: mediaError } = await projectImageService.create({
+            project_id: data.id,
+            image_url: mediaUrl,
+            sort_order: index,
+          });
+
+          if (mediaError) {
+            setSaving(false);
+            onError("Failed to save gallery media.");
+            return;
+          }
         }
       }
 
@@ -539,7 +753,7 @@ function ProjectForm({
           </h3>
           <p className="mt-1 text-sm text-neutral-400">
             {mode === "create"
-              ? "Create the project record, upload a thumbnail, and set the lead image."
+              ? "Create the project record, upload a thumbnail, and queue gallery media."
               : "Update project metadata without leaving the artwork manager."}
           </p>
         </div>
@@ -633,10 +847,11 @@ function ProjectForm({
           }
         />
         <ImageUploader
-          label="Hero / Lead Image"
+          label="Hero / Lead Media"
           folder="heroes"
           value={form.leadImageUrl}
-          helperText="Used as the first gallery image and project-page lead image."
+          accept="image/*,video/*"
+          helperText="Used as the first gallery item and project-page lead media."
           onUploaded={(url) =>
             setForm((current) => ({
               ...current,
@@ -645,6 +860,14 @@ function ProjectForm({
           }
         />
       </div>
+
+      {mode === "create" && (
+        <PendingMediaUploader
+          items={pendingMediaItems}
+          onChange={setPendingMediaItems}
+          onError={onError}
+        />
+      )}
 
       <div className="flex flex-wrap gap-6">
         <label className="flex cursor-pointer items-center gap-3 select-none">
@@ -735,7 +958,7 @@ function GalleryImageUploader({
       await Promise.all(uploads);
       await onRefresh();
     } catch {
-      onError("Failed to upload gallery images.");
+      onError("Failed to upload gallery media.");
     } finally {
       setUploading(false);
     }
@@ -750,7 +973,7 @@ function GalleryImageUploader({
     });
 
     if (error) {
-      onError("Failed to attach gallery image.");
+      onError("Failed to attach gallery media.");
       return;
     }
 
@@ -758,13 +981,13 @@ function GalleryImageUploader({
   };
 
   const handleDeleteImage = async (imageId: string) => {
-    if (!confirm("Delete this image from the project gallery?")) {
+    if (!confirm("Delete this media item from the project gallery?")) {
       return;
     }
 
     const { error } = await projectImageService.delete(imageId);
     if (error) {
-      onError("Failed to delete image.");
+      onError("Failed to delete media item.");
       return;
     }
 
@@ -799,7 +1022,7 @@ function GalleryImageUploader({
     );
 
     if (error) {
-      onError("Failed to save image order.");
+      onError("Failed to save media order.");
     }
 
     await onRefresh();
@@ -811,10 +1034,10 @@ function GalleryImageUploader({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <span className="font-mono text-xs uppercase tracking-widest text-amber-400">
-            Gallery Images ({project.images.length})
+            Gallery Media ({project.images.length})
           </span>
           <p className="mt-1 text-xs text-neutral-500">
-            Drag to reorder. The first image is used as the lead image on project pages.
+            Drag to reorder. The first item is used as the lead media on project pages.
           </p>
         </div>
 
@@ -843,7 +1066,7 @@ function GalleryImageUploader({
           ref={inputRef}
           type="file"
           multiple
-          accept="image/*"
+            accept="image/*,video/*"
           className="hidden"
           onChange={(event) => {
             if (event.target.files) {
@@ -903,37 +1126,23 @@ function GalleryImageUploader({
                   setDragOverImageId(null);
                 }}
               >
-                <img
-                  src={image.image_url}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  loading="lazy"
+                <MediaTile
+                  url={image.image_url}
+                  badge={index === 0 ? "Lead" : undefined}
+                  onRemove={() => void handleDeleteImage(image.id)}
                 />
-                {index === 0 && (
-                  <span className="absolute left-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-amber-300">
-                    Lead
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => void handleDeleteImage(image.id)}
-                  className="absolute right-1 top-1 rounded bg-black/70 p-1 text-red-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-                  title="Remove image"
-                >
-                  <TrashSimple size={12} />
-                </button>
               </div>
             );
           })}
         </div>
       ) : (
         <div className="rounded border border-dashed border-neutral-700 px-4 py-8 text-center text-sm text-neutral-500">
-          No gallery images yet. Upload new artwork or browse the storage bucket.
+          No gallery media yet. Upload artwork or video, or browse the storage bucket.
         </div>
       )}
 
       {savingOrder && (
-        <p className="font-mono text-xs text-amber-400">Saving image order...</p>
+        <p className="font-mono text-xs text-amber-400">Saving media order...</p>
       )}
     </div>
   );
@@ -997,7 +1206,7 @@ function ProjectRow({
           </p>
           <div className="mt-1 flex items-center gap-3 text-xs text-neutral-500">
             <span>{project.published ? "Published" : "Draft"}</span>
-            <span>{project.images.length} images</span>
+            <span>{project.images.length} media items</span>
             <span>Order {project.sort_order}</span>
           </div>
         </div>
@@ -1125,7 +1334,7 @@ export default function AdminPage() {
             </p>
             <h1 className="font-serif text-4xl text-white">Portfolio Manager</h1>
             <p className="mt-2 text-sm text-neutral-400">
-              Upload artwork, set lead images, and manage the portfolio without
+              Upload artwork, queue multiple images or videos, and manage the portfolio without
               flattening the presentation layer.
             </p>
           </div>

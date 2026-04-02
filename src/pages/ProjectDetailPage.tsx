@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { gsap } from "gsap";
 import { ArrowLeft, ArrowSquareOut } from "@phosphor-icons/react";
 import { projectService } from "../lib/database";
+import { isVideoUrl } from "../lib/media";
 import { useState } from "react";
 import type { ProjectImage, ProjectWithImages } from "../types/project";
 
@@ -12,6 +13,47 @@ type DetailProject = ProjectWithImages & {
 
 function isProcessShot(image: ProjectImage) {
   return /process|wip|sketch|bts|behind/i.test(image.image_url);
+}
+
+function MediaBlock({
+  src,
+  alt,
+  hero = false,
+}: {
+  src: string;
+  alt: string;
+  hero?: boolean;
+}) {
+  if (isVideoUrl(src)) {
+    return hero ? (
+      <video
+        src={src}
+        className="h-full w-full object-cover"
+        autoPlay
+        loop
+        muted
+        playsInline
+        controls={false}
+      />
+    ) : (
+      <video
+        src={src}
+        className="h-auto w-full object-cover"
+        controls
+        playsInline
+        preload="metadata"
+      />
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={hero ? "h-full w-full object-cover" : "h-auto w-full object-cover"}
+      loading={hero ? "eager" : "lazy"}
+    />
+  );
 }
 
 export default function ProjectDetailPage() {
@@ -128,12 +170,7 @@ export default function ProjectDetailPage() {
         className="relative h-[60vh] w-full overflow-hidden md:h-[75vh]"
       >
         {heroImage && (
-          <img
-            src={heroImage}
-            alt={project.title}
-            className="h-full w-full object-cover"
-            loading="eager"
-          />
+          <MediaBlock src={heroImage} alt={project.title} hero />
         )}
         <div
           className="absolute inset-0"
@@ -200,12 +237,7 @@ export default function ProjectDetailPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {galleryImages.map((image) => (
                 <div key={image.id} className="overflow-hidden rounded-md bg-secondary">
-                  <img
-                    src={image.image_url}
-                    alt={project.title}
-                    className="h-auto w-full object-cover"
-                    loading="lazy"
-                  />
+                  <MediaBlock src={image.image_url} alt={project.title} />
                 </div>
               ))}
             </div>
@@ -220,12 +252,7 @@ export default function ProjectDetailPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {processImages.map((image) => (
                 <div key={image.id} className="overflow-hidden rounded-md bg-secondary">
-                  <img
-                    src={image.image_url}
-                    alt="Process shot"
-                    className="h-auto w-full object-cover"
-                    loading="lazy"
-                  />
+                  <MediaBlock src={image.image_url} alt="Process shot" />
                 </div>
               ))}
             </div>
