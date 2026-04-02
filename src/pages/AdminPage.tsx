@@ -18,7 +18,7 @@ import { projectImageService, projectService } from "../lib/database";
 import { getPublicUrl, listImages, uploadImage } from "../lib/storage";
 import type { ProjectWithImages } from "../types/project";
 
-const BROWSE_FOLDERS = ["thumbnails", "heroes", "gallery"];
+const BROWSE_FOLDERS = ["projects", "thumbnails", "heroes", "gallery"];
 const CATEGORIES = [
   "Character Design",
   "Illustration",
@@ -205,6 +205,15 @@ function StorageBrowser({
                 No images found in{" "}
                 <code className="font-mono text-amber-400">/{folder}</code>
               </p>
+              {folder !== "projects" && (
+                <button
+                  type="button"
+                  onClick={() => setFolder("projects")}
+                  className="rounded border border-neutral-700 px-3 py-1.5 font-mono text-xs uppercase tracking-widest text-neutral-300 transition-colors duration-200 hover:border-amber-500 hover:text-white"
+                >
+                  View Legacy /projects Uploads
+                </button>
+              )}
             </div>
           )}
 
