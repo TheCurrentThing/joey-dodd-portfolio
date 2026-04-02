@@ -57,34 +57,31 @@ export default function Footer() {
             <p className="font-mono text-label uppercase tracking-widest text-tertiary text-xs mb-4">
               Connect
             </p>
-            <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
               <a
-                href="mailto:joey@joeydodd.art"
-                className="inline-flex items-center gap-3 font-sans text-neutral-300 text-body hover:text-tertiary transition-colors duration-300"
+                href="mailto:joeydodd@gmail.com"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-neutral-800 text-neutral-300 transition-colors duration-300 hover:text-tertiary"
                 aria-label="Email Joey Dodd"
               >
                 <EnvelopeSimple size={18} weight="regular" />
-                joey@joeydodd.art
               </a>
               <a
-                href="https://instagram.com"
+                href="https://instagram.com/joeydoddart"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 font-sans text-neutral-300 text-body hover:text-tertiary transition-colors duration-300"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-neutral-800 text-neutral-300 transition-colors duration-300 hover:text-tertiary"
                 aria-label="Joey Dodd on Instagram"
               >
                 <InstagramLogo size={18} weight="regular" />
-                @joeydodd.art
               </a>
               <a
-                href="https://linkedin.com"
+                href="https://www.linkedin.com/in/joey-dodd-014b9961/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 font-sans text-neutral-300 text-body hover:text-tertiary transition-colors duration-300"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-neutral-800 text-neutral-300 transition-colors duration-300 hover:text-tertiary"
                 aria-label="Joey Dodd on LinkedIn"
               >
                 <LinkedinLogo size={18} weight="regular" />
-                Joey Dodd
               </a>
             </div>
           </div>

@@ -81,7 +81,7 @@ export default function ContactPage() {
       `Name: ${formData.name}\nEmail: ${formData.email}\n\n${formData.message}`
     );
 
-    window.location.href = `mailto:joey@joeydodd.art?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:joeydodd@gmail.com?subject=${subject}&body=${body}`;
     setSubmitted(true);
   };
 
@@ -116,10 +116,10 @@ export default function ContactPage() {
               <h2 className="mb-6 font-serif text-h3 text-foreground">
                 Get in touch
               </h2>
-              <div className="flex flex-col gap-6">
+              <div className="flex items-center gap-4">
                 <a
-                  href="mailto:joey@joeydodd.art"
-                  className="group inline-flex items-center gap-4 text-neutral-200 transition-colors duration-300 hover:text-tertiary"
+                  href="mailto:joeydodd@gmail.com"
+                  className="group inline-flex items-center justify-center"
                   aria-label="Send email to Joey Dodd"
                 >
                   <span className="flex h-12 w-12 items-center justify-center rounded-md bg-neutral-800 transition-colors duration-300 group-hover:bg-neutral-700">
@@ -129,21 +129,13 @@ export default function ContactPage() {
                       className="text-tertiary"
                     />
                   </span>
-                  <div>
-                    <p className="mb-1 font-mono text-xs uppercase tracking-widest text-tertiary">
-                      Email
-                    </p>
-                    <p className="font-sans text-body-lg text-foreground">
-                      joey@joeydodd.art
-                    </p>
-                  </div>
                 </a>
 
                 <a
-                  href="https://instagram.com"
+                  href="https://instagram.com/joeydoddart"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group inline-flex items-center gap-4 text-neutral-200 transition-colors duration-300 hover:text-tertiary"
+                  className="group inline-flex items-center justify-center"
                   aria-label="Joey Dodd on Instagram"
                 >
                   <span className="flex h-12 w-12 items-center justify-center rounded-md bg-neutral-800 transition-colors duration-300 group-hover:bg-neutral-700">
@@ -153,21 +145,13 @@ export default function ContactPage() {
                       className="text-tertiary"
                     />
                   </span>
-                  <div>
-                    <p className="mb-1 font-mono text-xs uppercase tracking-widest text-tertiary">
-                      Instagram
-                    </p>
-                    <p className="font-sans text-body-lg text-foreground">
-                      @joeydodd.art
-                    </p>
-                  </div>
                 </a>
 
                 <a
-                  href="https://linkedin.com"
+                  href="https://www.linkedin.com/in/joey-dodd-014b9961/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group inline-flex items-center gap-4 text-neutral-200 transition-colors duration-300 hover:text-tertiary"
+                  className="group inline-flex items-center justify-center"
                   aria-label="Joey Dodd on LinkedIn"
                 >
                   <span className="flex h-12 w-12 items-center justify-center rounded-md bg-neutral-800 transition-colors duration-300 group-hover:bg-neutral-700">
@@ -177,14 +161,6 @@ export default function ContactPage() {
                       className="text-tertiary"
                     />
                   </span>
-                  <div>
-                    <p className="mb-1 font-mono text-xs uppercase tracking-widest text-tertiary">
-                      LinkedIn
-                    </p>
-                    <p className="font-sans text-body-lg text-foreground">
-                      Joey Dodd
-                    </p>
-                  </div>
                 </a>
               </div>
             </div>
