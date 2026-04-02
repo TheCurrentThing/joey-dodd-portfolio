@@ -3,13 +3,13 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export default function LoginPage() {
-  const { user, signIn } = useAuth();
+  const { user, isAdmin, signIn, signOut } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (user) {
+  if (user && isAdmin) {
     return <Navigate to="/admin" replace />;
   }
 
@@ -25,6 +25,11 @@ export default function LoginPage() {
     setLoading(false);
   };
 
+  const handleUnauthorizedSignOut = async () => {
+    setError("");
+    await signOut();
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
@@ -33,6 +38,20 @@ export default function LoginPage() {
             Sign in to your account
           </h2>
         </div>
+        {user && !isAdmin ? (
+          <div className="space-y-4 rounded-lg border border-red-500/30 bg-red-950/30 p-6 text-center">
+            <p className="text-sm text-red-300">
+              This account is signed in but is not authorized for admin access.
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleUnauthorizedSignOut()}
+              className="w-full rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+            >
+              Sign out
+            </button>
+          </div>
+        ) : (
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
@@ -81,6 +100,7 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );
