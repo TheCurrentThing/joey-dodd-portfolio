@@ -49,28 +49,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let active = true;
+
+    const applyUser = async (currentUser: User | null) => {
+      if (!active) {
+        return;
+      }
+
+      setUser(currentUser);
+
+      try {
+        await syncProfile(currentUser);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
     auth
       .getUser()
-      .then(async ({ user: currentUser }) => {
-        setUser(currentUser);
-        await syncProfile(currentUser);
-      })
-      .finally(() => {
-        setLoading(false);
+      .then(({ user: currentUser }) => {
+        void applyUser(currentUser);
       });
 
     const {
       data: { subscription },
-    } = auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      try {
-        await syncProfile(session?.user ?? null);
-      } finally {
-        setLoading(false);
-      }
+    } = auth.onAuthStateChange((_event, session) => {
+      window.setTimeout(() => {
+        void applyUser(session?.user ?? null);
+      }, 0);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
