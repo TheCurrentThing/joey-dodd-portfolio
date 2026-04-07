@@ -30,25 +30,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const { profile: currentProfile } = await auth.getProfile(currentUser.id);
-    setProfile(currentProfile);
-    setIsAdmin(Boolean(currentProfile?.is_admin) || isAllowedAdminEmail(currentUser.email));
-    setHasLessonsAccess(Boolean(currentProfile?.has_lessons_access));
+    try {
+      let { profile: currentProfile } = await auth.getProfile(currentUser.id);
+
+      if (!currentProfile) {
+        const ensured = await auth.ensureProfile(currentUser.id);
+        currentProfile = ensured.profile;
+      }
+
+      setProfile(currentProfile);
+      setIsAdmin(Boolean(currentProfile?.is_admin) || isAllowedAdminEmail(currentUser.email));
+      setHasLessonsAccess(Boolean(currentProfile?.has_lessons_access));
+    } catch {
+      setProfile(null);
+      setIsAdmin(isAllowedAdminEmail(currentUser.email));
+      setHasLessonsAccess(false);
+    }
   };
 
   useEffect(() => {
-    auth.getUser().then(async ({ user: currentUser }) => {
-      setUser(currentUser);
-      await syncProfile(currentUser);
-      setLoading(false);
-    });
+    auth
+      .getUser()
+      .then(async ({ user: currentUser }) => {
+        setUser(currentUser);
+        await syncProfile(currentUser);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
     const {
       data: { subscription },
     } = auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
-      await syncProfile(session?.user ?? null);
-      setLoading(false);
+      try {
+        await syncProfile(session?.user ?? null);
+      } finally {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();

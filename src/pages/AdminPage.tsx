@@ -1289,16 +1289,24 @@ export default function AdminPage() {
   const [error, setError] = useState("");
 
   const loadProjects = useCallback(async () => {
-    const { data, error: requestError } = await projectService.getAll();
+    try {
+      const { data, error: requestError } = await projectService.getAll();
 
-    if (requestError) {
+      if (requestError) {
+        setError("Failed to load projects.");
+        setProjects([]);
+        setLoading(false);
+        return;
+      }
+
+      setProjects(data ?? []);
+      setError("");
+    } catch {
       setError("Failed to load projects.");
+      setProjects([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setProjects(data ?? []);
-    setLoading(false);
   }, []);
 
   useEffect(() => {

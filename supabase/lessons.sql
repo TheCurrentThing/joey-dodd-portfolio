@@ -8,6 +8,23 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+alter table public.profiles
+  add column if not exists is_admin boolean not null default false;
+
+alter table public.profiles
+  add column if not exists has_lessons_access boolean not null default false;
+
+alter table public.profiles
+  add column if not exists created_at timestamptz not null default timezone('utc', now());
+
+alter table public.profiles
+  add column if not exists updated_at timestamptz not null default timezone('utc', now());
+
+insert into public.profiles (id)
+select users.id
+from auth.users as users
+on conflict (id) do nothing;
+
 create or replace function public.set_current_timestamp_updated_at()
 returns trigger
 language plpgsql
@@ -53,6 +70,36 @@ create table if not exists public.lesson_modules (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+alter table public.lesson_modules
+  add column if not exists short_description text;
+
+alter table public.lesson_modules
+  add column if not exists cover_image_url text;
+
+alter table public.lesson_modules
+  add column if not exists is_free boolean not null default false;
+
+alter table public.lesson_modules
+  add column if not exists is_published boolean not null default false;
+
+alter table public.lesson_modules
+  add column if not exists sort_order integer not null default 0;
+
+alter table public.lesson_modules
+  add column if not exists category text;
+
+alter table public.lesson_modules
+  add column if not exists level text;
+
+alter table public.lesson_modules
+  add column if not exists age_range text;
+
+alter table public.lesson_modules
+  add column if not exists created_at timestamptz not null default timezone('utc', now());
+
+alter table public.lesson_modules
+  add column if not exists updated_at timestamptz not null default timezone('utc', now());
+
 create table if not exists public.lesson_resources (
   id uuid primary key default gen_random_uuid(),
   module_id uuid not null references public.lesson_modules(id) on delete cascade,
@@ -64,6 +111,24 @@ create table if not exists public.lesson_resources (
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.lesson_resources
+  add column if not exists url text;
+
+alter table public.lesson_resources
+  add column if not exists storage_path text;
+
+alter table public.lesson_resources
+  add column if not exists file_kind text;
+
+alter table public.lesson_resources
+  add column if not exists sort_order integer not null default 0;
+
+alter table public.lesson_resources
+  add column if not exists created_at timestamptz not null default timezone('utc', now());
+
+alter table public.lesson_resources
+  add column if not exists updated_at timestamptz not null default timezone('utc', now());
 
 create table if not exists public.lesson_module_blocks (
   id uuid primary key default gen_random_uuid(),
@@ -84,6 +149,42 @@ create table if not exists public.lesson_module_blocks (
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.lesson_module_blocks
+  add column if not exists body text;
+
+alter table public.lesson_module_blocks
+  add column if not exists media_kind text;
+
+alter table public.lesson_module_blocks
+  add column if not exists media_url text;
+
+alter table public.lesson_module_blocks
+  add column if not exists storage_path text;
+
+alter table public.lesson_module_blocks
+  add column if not exists poster_image_url text;
+
+alter table public.lesson_module_blocks
+  add column if not exists caption text;
+
+alter table public.lesson_module_blocks
+  add column if not exists alt_text text;
+
+alter table public.lesson_module_blocks
+  add column if not exists settings jsonb;
+
+alter table public.lesson_module_blocks
+  add column if not exists sort_order integer not null default 0;
+
+alter table public.lesson_module_blocks
+  add column if not exists created_at timestamptz not null default timezone('utc', now());
+
+alter table public.lesson_module_blocks
+  add column if not exists updated_at timestamptz not null default timezone('utc', now());
+
+alter table public.lesson_module_blocks
+  add column if not exists resource_id uuid references public.lesson_resources(id) on delete set null;
 
 create index if not exists lesson_modules_sort_order_idx
   on public.lesson_modules(sort_order);
@@ -164,6 +265,12 @@ create policy "profiles self update"
   on public.profiles
   for update
   using (auth.uid() = id or public.is_admin())
+  with check (auth.uid() = id or public.is_admin());
+
+drop policy if exists "profiles self insert" on public.profiles;
+create policy "profiles self insert"
+  on public.profiles
+  for insert
   with check (auth.uid() = id or public.is_admin());
 
 drop policy if exists "lesson modules public read" on public.lesson_modules;

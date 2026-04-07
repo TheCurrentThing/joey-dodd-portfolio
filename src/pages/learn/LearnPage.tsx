@@ -14,14 +14,36 @@ export default function LearnPage() {
   const [activeFilter, setActiveFilter] = useState(ALL_FILTER);
 
   useEffect(() => {
-    fetchPublishedLessonModules().then(({ data, error: requestError }) => {
-      if (requestError) {
-        setError(requestError.message);
-      } else {
-        setModules(data ?? []);
+    let active = true;
+
+    async function loadModules() {
+      try {
+        const { data, error: requestError } = await fetchPublishedLessonModules();
+        if (!active) {
+          return;
+        }
+
+        if (requestError) {
+          setError(requestError.message);
+        } else {
+          setModules(data ?? []);
+        }
+      } catch {
+        if (active) {
+          setError("Failed to load lessons.");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
-    });
+    }
+
+    void loadModules();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filters = useMemo(() => {
@@ -119,7 +141,9 @@ export default function LearnPage() {
             ))}
             {filteredModules.length === 0 && (
               <div className="col-span-full rounded-xl border border-dashed border-border px-6 py-16 text-center text-neutral-400">
-                No lessons match that filter yet.
+                {modules.length === 0
+                  ? "No published lessons are live yet."
+                  : "No lessons match that filter yet."}
               </div>
             )}
           </div>

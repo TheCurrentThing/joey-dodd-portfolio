@@ -124,6 +124,23 @@ export const auth = {
     return { profile: (data as Profile | null) ?? null, error };
   },
 
+  ensureProfile: async (userId: string) => {
+    if (SUPABASE_CONFIG_ERROR) {
+      return {
+        profile: null,
+        error: new Error(SUPABASE_CONFIG_ERROR),
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .upsert({ id: userId }, { onConflict: "id" })
+      .select("*")
+      .single();
+
+    return { profile: (data as Profile | null) ?? null, error };
+  },
+
   onAuthStateChange: (callback: (event: string, session: any) => void) => {
     if (SUPABASE_CONFIG_ERROR) {
       return {

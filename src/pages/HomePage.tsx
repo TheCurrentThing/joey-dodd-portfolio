@@ -17,12 +17,42 @@ export default function HomePage() {
   const ctaRef = useRef<HTMLDivElement>(null);
   const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [featureError, setFeatureError] = useState<string | null>(null);
 
   useEffect(() => {
-    projects.getFeatured().then(({ data }) => {
-      setFeaturedProjects(data || []);
-      setLoading(false);
-    });
+    let active = true;
+
+    async function loadFeatured() {
+      try {
+        const { data, error } = await projects.getFeatured();
+        if (!active) {
+          return;
+        }
+
+        if (error) {
+          setFeatureError(error.message || "Failed to load featured projects.");
+          setFeaturedProjects([]);
+        } else {
+          setFeatureError(null);
+          setFeaturedProjects(data || []);
+        }
+      } catch {
+        if (active) {
+          setFeatureError("Failed to load featured projects.");
+          setFeaturedProjects([]);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadFeatured();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -148,12 +178,15 @@ export default function HomePage() {
             <p className="mb-3 font-mono text-sm uppercase tracking-widest text-tertiary">
               Selected Work
             </p>
-            <h2 className="font-serif text-h2 text-foreground md:text-4xl">
-              Featured Projects
-            </h2>
-          </div>
-          <FeaturedGrid projects={featuredProjects} isPending={loading} />
+          <h2 className="font-serif text-h2 text-foreground md:text-4xl">
+            Featured Projects
+          </h2>
+          {featureError && (
+            <p className="mt-4 font-sans text-sm text-warning">{featureError}</p>
+          )}
         </div>
+        <FeaturedGrid projects={featuredProjects} isPending={loading} />
+      </div>
       </section>
 
       <div ref={aboutRef} id="about">
