@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { Project } from "../types/project";
-import { REFERENCE_MEDIA } from "../lib/referenceMedia";
+import ProjectThumbnail from "./ProjectThumbnail";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -68,11 +68,7 @@ export default function FeaturedGrid({ projects, isPending }: Props) {
       role="list"
       aria-label="Featured projects"
     >
-      {projects.map((project, index) => {
-        const imgSrc =
-          project.thumbnail_url ||
-          REFERENCE_MEDIA.fallbackImages[index % REFERENCE_MEDIA.fallbackImages.length];
-
+      {projects.map((project) => {
         return (
           <article
             key={project.id}
@@ -87,11 +83,10 @@ export default function FeaturedGrid({ projects, isPending }: Props) {
             tabIndex={0}
             aria-label={`${project.title} - ${project.category || "Uncategorized"}`}
           >
-            <img
-              src={imgSrc}
-              alt={project.title}
+            <ProjectThumbnail
+              src={project.thumbnail_url}
+              title={project.title}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
             />
             <div
               className="absolute inset-0 bg-gradient-2 opacity-0 transition-opacity duration-400 group-hover:opacity-90"

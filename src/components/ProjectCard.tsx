@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import type { Project } from "../types/project";
-import { REFERENCE_MEDIA } from "../lib/referenceMedia";
+import ProjectThumbnail from "./ProjectThumbnail";
 
 type Props = {
   project: Project;
@@ -8,11 +8,6 @@ type Props = {
 
 export default function ProjectCard({ project }: Props) {
   const navigate = useNavigate();
-  const imgSrc =
-    project.thumbnail_url ||
-    REFERENCE_MEDIA.fallbackImages[
-      Math.abs(project.id.charCodeAt(0)) % REFERENCE_MEDIA.fallbackImages.length
-    ];
 
   return (
     <article
@@ -27,11 +22,10 @@ export default function ProjectCard({ project }: Props) {
       aria-label={`${project.title} - ${project.category || "Uncategorized"}`}
       role="article"
     >
-      <img
-        src={imgSrc}
-        alt={project.title}
+      <ProjectThumbnail
+        src={project.thumbnail_url}
+        title={project.title}
         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-        loading="lazy"
       />
       <div
         className="absolute inset-0 opacity-0 transition-opacity duration-400 group-hover:opacity-95"
