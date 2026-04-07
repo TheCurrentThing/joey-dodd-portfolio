@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useBeforeUnload, useBlocker } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { FloppyDisk, Plus, TrashSimple } from "@phosphor-icons/react";
 import type { LessonEditorErrors, LessonEditorState, LessonModule } from "../../types/lesson";
 import {
@@ -10,6 +10,7 @@ import {
 } from "../../lib/lessons/admin";
 import { fetchAdminLessonEditor, fetchAdminLessonModules } from "../../lib/lessons/queries";
 import { normalizeSortOrder } from "../../lib/lessons/ordering";
+import { useUnsavedChangesWarning } from "../../hooks/useUnsavedChangesWarning";
 import LessonContentView from "../../components/lessons/LessonContentView";
 import FormField from "../../components/admin/FormField";
 import MediaPicker from "../../components/admin/MediaPicker";
@@ -91,36 +92,50 @@ export default function AdminLessonEditorPage() {
 
     async function run() {
       setLoading(true);
+      setError(null);
 
-      if (isNew) {
-        const { data: modules } = await fetchAdminLessonModules();
-        const nextState = createNewLessonEditorState(modules?.length ?? 0);
+      try {
+        if (isNew) {
+          const { data: modules, error: modulesError } = await fetchAdminLessonModules();
+          if (!active) {
+            return;
+          }
+
+          const nextState = createNewLessonEditorState(modules?.length ?? 0);
+          setEditorState(nextState);
+          setSavedSnapshot(snapshotState(nextState));
+          setValidationErrors(EMPTY_ERRORS);
+          setError(modulesError?.message ?? null);
+          return;
+        }
+
+        const { data, error: requestError } = await fetchAdminLessonEditor(id!);
         if (!active) {
           return;
         }
+
+        if (requestError || !data) {
+          setError(requestError?.message || "Lesson not found.");
+          setEditorState(null);
+          return;
+        }
+
+        const nextState = toEditorState(data);
         setEditorState(nextState);
         setSavedSnapshot(snapshotState(nextState));
         setValidationErrors(EMPTY_ERRORS);
-        setLoading(false);
-        return;
-      }
+      } catch (loadError) {
+        if (!active) {
+          return;
+        }
 
-      const { data, error: requestError } = await fetchAdminLessonEditor(id!);
-      if (!active) {
-        return;
+        setEditorState(isNew ? createNewLessonEditorState(0) : null);
+        setError(loadError instanceof Error ? loadError.message : "Failed to load lesson editor.");
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
-
-      if (requestError || !data) {
-        setError(requestError?.message || "Lesson not found.");
-        setLoading(false);
-        return;
-      }
-
-      const nextState = toEditorState(data);
-      setEditorState(nextState);
-      setSavedSnapshot(snapshotState(nextState));
-      setValidationErrors(EMPTY_ERRORS);
-      setLoading(false);
     }
 
     void run();
@@ -138,34 +153,32 @@ export default function AdminLessonEditorPage() {
     return savedSnapshot !== snapshotState(editorState);
   }, [editorState, savedSnapshot]);
 
-  useBeforeUnload(
-    (event) => {
-      if (!dirty) {
-        return;
-      }
+  useUnsavedChangesWarning(dirty, "You have unsaved lesson changes. Leave without saving?");
 
-      event.preventDefault();
-      event.returnValue = "";
-    },
-    { capture: true }
-  );
-
-  const blocker = useBlocker(dirty);
-  useEffect(() => {
-    if (blocker.state !== "blocked") {
-      return;
-    }
-
-    const shouldLeave = window.confirm("You have unsaved lesson changes. Leave without saving?");
-    if (shouldLeave) {
-      blocker.proceed();
-    } else {
-      blocker.reset();
-    }
-  }, [blocker]);
-
-  if (loading || !editorState) {
+  if (loading) {
     return <div className="min-h-screen bg-neutral-950 pt-24 text-center text-neutral-400">Loading editor...</div>;
+  }
+
+  if (!editorState) {
+    return (
+      <div className="min-h-screen bg-neutral-950 pt-24 pb-24">
+        <div className="mx-auto max-w-3xl px-6 md:px-10">
+          <div className="rounded-2xl border border-red-500/20 bg-red-950/20 px-6 py-8 text-red-200">
+            <p className="font-mono text-xs uppercase tracking-[0.35em] text-red-300">Lesson Editor Error</p>
+            <h1 className="mt-3 font-serif text-3xl text-white">Unable to load this lesson editor</h1>
+            <p className="mt-3 text-sm text-red-100">{error ?? "An unexpected error occurred."}</p>
+            <div className="mt-6">
+              <Link
+                to="/admin/lessons"
+                className="inline-flex rounded border border-red-400/30 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.25em] text-red-100 transition-colors duration-300 hover:border-red-300 hover:text-white"
+              >
+                Back to Lessons
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const previewModule = toPreviewModule(editorState.module);
