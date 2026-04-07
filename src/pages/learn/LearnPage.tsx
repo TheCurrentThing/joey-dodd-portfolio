@@ -68,6 +68,9 @@ export default function LearnPage() {
             <p className="font-mono text-xs uppercase tracking-[0.4em] text-tertiary">
               Art Lessons For Kids
             </p>
+            <div className="mt-5 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.35em] text-amber-200">
+              Coming Soon: The full lesson library is still being prepared.
+            </div>
             <h1 className="mt-5 max-w-3xl font-serif text-5xl leading-tight text-foreground md:text-6xl">
               A warm, guided studio space for young artists to keep making.
             </h1>
@@ -75,6 +78,10 @@ export default function LearnPage() {
               Each lesson is built like a thoughtful studio session: clear steps, visual examples,
               video guidance, and printable support when it helps. Browse free previews, then log
               in as a lesson member for the full library.
+            </p>
+            <p className="mt-4 max-w-2xl font-sans text-sm leading-relaxed text-neutral-400">
+              Early preview pages may appear before the full program opens. If you want first
+              access when lessons go live, use the contact link below.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Link
