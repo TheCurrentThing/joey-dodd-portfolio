@@ -8,6 +8,11 @@ import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ContactPage from "./pages/ContactPage";
 import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
+import LearnPage from "./pages/learn/LearnPage";
+import LearnLoginPage from "./pages/learn/LearnLoginPage";
+import LessonModulePage from "./pages/learn/LessonModulePage";
+import AdminLessonsPage from "./pages/admin/AdminLessonsPage";
+import AdminLessonEditorPage from "./pages/admin/AdminLessonEditorPage";
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
 
@@ -22,11 +27,38 @@ function AppContent() {
           <Route path="/portfolio/:slug" element={<ProjectDetailPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/learn" element={<LearnPage />} />
+          <Route path="/learn/login" element={<LearnLoginPage />} />
+          <Route path="/learn/module/:slug" element={<LessonModulePage />} />
           <Route
             path="/admin"
             element={
               <ProtectedRoute>
                 <AdminPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/lessons"
+            element={
+              <ProtectedRoute>
+                <AdminLessonsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/lessons/new"
+            element={
+              <ProtectedRoute>
+                <AdminLessonEditorPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/lessons/:id/edit"
+            element={
+              <ProtectedRoute>
+                <AdminLessonEditorPage />
               </ProtectedRoute>
             }
           />

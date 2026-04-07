@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   CaretDown,
   CaretUp,
@@ -1337,6 +1338,14 @@ export default function AdminPage() {
               Upload artwork, queue multiple images or videos, and manage the portfolio without
               flattening the presentation layer.
             </p>
+            <div className="mt-4">
+              <Link
+                to="/admin/lessons"
+                className="inline-flex items-center gap-2 rounded border border-neutral-700 px-4 py-2 font-mono text-xs uppercase tracking-[0.25em] text-neutral-300 transition-colors duration-300 hover:border-amber-500 hover:text-amber-300"
+              >
+                Open Lessons Manager
+              </Link>
+            </div>
           </div>
           <button
             onClick={() => void signOut()}

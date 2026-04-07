@@ -34,9 +34,19 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
         <div>
+          <p className="text-center text-xs uppercase tracking-[0.35em] text-amber-300">
+            Site / Admin Access
+          </p>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
-            Sign in to your account
+            Sign in to manage the site
           </h2>
+          <p className="mt-3 text-center text-sm text-neutral-300">
+            This login is for site administration. Lesson members should use the separate{" "}
+            <a href="/learn/login" className="text-amber-300 underline-offset-4 hover:underline">
+              lesson member login
+            </a>
+            .
+          </p>
         </div>
         {user && !isAdmin ? (
           <div className="space-y-4 rounded-lg border border-red-500/30 bg-red-950/30 p-6 text-center">
