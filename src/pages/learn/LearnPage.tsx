@@ -72,7 +72,7 @@ export default function LearnPage() {
             <img
               src={DOODLES_LOGO}
               alt="Doodles Design School"
-              className="mt-6 h-auto w-full max-w-[32rem] opacity-95 sm:max-w-[42rem] lg:w-[130%] lg:max-w-[52rem]"
+              className="mt-6 h-auto w-full max-w-[32rem] opacity-95 sm:max-w-[42rem] lg:w-[165%] lg:max-w-none xl:w-[175%]"
             />
             <div className="mt-5 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.35em] text-amber-200">
               Coming Soon: The full lesson library is still being prepared.
