@@ -6,6 +6,7 @@ import {
   serializeBlockForUpsert,
   serializeResourceForUpsert,
 } from "./queries";
+import { normalizeLessonPublicAssetUrl } from "./media";
 import { duplicateOrderedItem, normalizeSortOrder } from "./ordering";
 import { hasValidationErrors, validateLessonEditorState } from "./validation";
 
@@ -173,6 +174,10 @@ export function createNewLessonEditorState(defaultSortOrder: number): LessonEdit
 }
 
 export function normalizeModuleForSave(module: LessonModuleInput) {
+  const normalizedCoverUrl = module.cover_image_url?.trim()
+    ? normalizeLessonPublicAssetUrl("cover", module.cover_image_url.trim())
+    : "";
+
   return {
     ...module,
     title: module.title.trim(),
@@ -181,6 +186,6 @@ export function normalizeModuleForSave(module: LessonModuleInput) {
     category: module.category?.trim() ?? "",
     level: module.level?.trim() ?? "",
     age_range: module.age_range?.trim() ?? "",
-    cover_image_url: module.cover_image_url?.trim() ?? "",
+    cover_image_url: normalizedCoverUrl,
   };
 }

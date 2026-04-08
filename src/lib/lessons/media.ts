@@ -40,7 +40,20 @@ export async function uploadLessonAsset(
 ) {
   const bucket = getLessonAssetBucket(options.assetType, options.visibility);
   const folder = options.folder ?? options.assetType;
-  return uploadBucketFile(file, bucket, folder);
+  const result = await uploadBucketFile(file, bucket, folder);
+
+  if (!result.success) {
+    return result;
+  }
+
+  if (options.visibility === "public") {
+    return {
+      ...result,
+      url: getBucketPublicUrl(bucket, result.path),
+    };
+  }
+
+  return result;
 }
 
 export async function listLessonAssets(options: {
@@ -60,6 +73,39 @@ export function getLessonPublicAssetUrl(
 ) {
   const bucket = getLessonAssetBucket(assetType, visibility);
   return getBucketPublicUrl(bucket, storagePath);
+}
+
+export function normalizeLessonPublicAssetUrl(
+  assetType: LessonAssetType,
+  rawUrl: string,
+  visibility: LessonAssetVisibility = "public"
+) {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const bucket = getLessonAssetBucket(assetType, visibility);
+
+  try {
+    const parsed = new URL(trimmed);
+    const signPrefix = `/storage/v1/object/sign/${bucket}/`;
+    const publicPrefix = `/storage/v1/object/public/${bucket}/`;
+
+    if (parsed.pathname.startsWith(signPrefix)) {
+      const storagePath = decodeURIComponent(parsed.pathname.slice(signPrefix.length));
+      return getBucketPublicUrl(bucket, storagePath);
+    }
+
+    if (parsed.pathname.startsWith(publicPrefix)) {
+      const storagePath = decodeURIComponent(parsed.pathname.slice(publicPrefix.length));
+      return getBucketPublicUrl(bucket, storagePath);
+    }
+  } catch {
+    return trimmed;
+  }
+
+  return trimmed;
 }
 
 export async function resolveLessonAssetUrl(options: {

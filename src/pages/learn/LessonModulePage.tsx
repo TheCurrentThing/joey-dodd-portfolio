@@ -4,6 +4,7 @@ import { ArrowLeft } from "@phosphor-icons/react";
 import type { LessonBlock, LessonModule, LessonResource } from "../../types/lesson";
 import { useAuth } from "../../hooks/useAuth";
 import { isLessonLocked } from "../../lib/lessons/access";
+import { normalizeLessonPublicAssetUrl } from "../../lib/lessons/media";
 import {
   fetchLessonBlocks,
   fetchLessonModuleBySlug,
@@ -73,6 +74,10 @@ export default function LessonModulePage() {
 
     return isLessonLocked(module, { isAdmin, hasLessonsAccess });
   }, [hasLessonsAccess, isAdmin, module]);
+
+  const lockedCoverUrl = module?.cover_image_url
+    ? normalizeLessonPublicAssetUrl("cover", module.cover_image_url)
+    : "";
 
   useEffect(() => {
     if (!module) {
@@ -164,9 +169,9 @@ export default function LessonModulePage() {
                     {module.short_description}
                   </p>
                 )}
-                {module.cover_image_url && (
+                {lockedCoverUrl && (
                   <div className="overflow-hidden rounded-2xl border border-border bg-secondary">
-                    <img src={module.cover_image_url} alt={module.title} className="max-h-[32rem] w-full object-cover" />
+                    <img src={lockedCoverUrl} alt={module.title} className="max-h-[32rem] w-full object-cover" />
                   </div>
                 )}
               </div>

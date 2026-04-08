@@ -1,4 +1,5 @@
 import type { LessonBlock, LessonModule, LessonResource, LessonResourceInput } from "../../types/lesson";
+import { normalizeLessonPublicAssetUrl } from "../../lib/lessons/media";
 import LessonBlockRenderer from "./LessonBlockRenderer";
 import LessonTagRow from "./LessonTagRow";
 import ModuleResourceList from "./ModuleResourceList";
@@ -12,6 +13,10 @@ export default function LessonContentView({
   blocks: LessonBlock[];
   resources: Array<LessonResource | LessonResourceInput>;
 }) {
+  const coverUrl = module.cover_image_url
+    ? normalizeLessonPublicAssetUrl("cover", module.cover_image_url)
+    : "";
+
   return (
     <div className="space-y-12 md:space-y-16">
       <div className="space-y-5">
@@ -26,9 +31,9 @@ export default function LessonContentView({
         </div>
       </div>
 
-      {module.cover_image_url && (
+      {coverUrl && (
         <div className="overflow-hidden rounded-2xl border border-border bg-secondary">
-          <img src={module.cover_image_url} alt={module.title} className="max-h-[32rem] w-full object-cover" />
+          <img src={coverUrl} alt={module.title} className="max-h-[32rem] w-full object-cover" />
         </div>
       )}
 
