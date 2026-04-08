@@ -1,18 +1,74 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight, Palette, Sparkle } from "@phosphor-icons/react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Palette, Sparkle } from "@phosphor-icons/react";
 import type { LessonModule } from "../../types/lesson";
 import { fetchPublishedLessonModules } from "../../lib/lessons/queries";
 import LessonCard from "../../components/lessons/LessonCard";
 import doodlesLogo from "../../assets/doodles-design-school-logo-v2.png";
+import MembershipCheckoutButton from "../../components/lessons/MembershipCheckoutButton";
+import { useAuth } from "../../hooks/useAuth";
 
 const ALL_FILTER = "All";
 
 export default function LearnPage() {
+  const { user, hasLessonsAccess, isAdmin, refreshProfile } = useAuth();
+  const [searchParams] = useSearchParams();
   const [modules, setModules] = useState<LessonModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState(ALL_FILTER);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    const billingState = searchParams.get("billing");
+
+    if (billingState === "cancelled") {
+      setSyncNotice("Checkout was cancelled. You can restart membership any time.");
+      return;
+    }
+
+    if (billingState !== "success") {
+      setSyncNotice(null);
+      return;
+    }
+
+    if (isAdmin || hasLessonsAccess) {
+      setSyncNotice("Membership is active. Your lesson library is ready.");
+      return;
+    }
+
+    if (!user) {
+      setSyncNotice("Payment succeeded. Sign in to unlock your lesson library.");
+      return;
+    }
+
+    setSyncNotice("Payment received. We’re syncing your lesson access now.");
+
+    let active = true;
+    let attempts = 0;
+
+    const intervalId = window.setInterval(() => {
+      attempts += 1;
+
+      void refreshProfile().then(() => {
+        if (!active) {
+          return;
+        }
+
+        if (attempts >= 5) {
+          window.clearInterval(intervalId);
+          setSyncNotice(
+            "Payment succeeded, but access is still syncing. Refresh in a moment or sign in again if needed."
+          );
+        }
+      });
+    }, 2500);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, [searchParams, user, hasLessonsAccess, isAdmin, refreshProfile]);
 
   useEffect(() => {
     let active = true;
@@ -89,14 +145,16 @@ export default function LearnPage() {
               Early preview pages may appear before the full program opens. If you want first
               access when lessons go live, use the contact link below.
             </p>
+            {syncNotice && (
+              <div className="mt-5 inline-flex rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                {syncNotice}
+              </div>
+            )}
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Link
-                to="/contact"
-                className="inline-flex items-center gap-2 rounded-md bg-cta-primary-bg px-6 py-3 font-sans text-label uppercase tracking-widest text-cta-primary-fg transition-colors duration-300 hover:bg-tertiary"
-              >
-                Ask About Access
-                <ArrowRight size={16} />
-              </Link>
+              <MembershipCheckoutButton
+                label="Start Membership"
+                className="inline-flex items-center gap-2 rounded-md bg-cta-primary-bg px-6 py-3 font-sans text-label uppercase tracking-widest text-cta-primary-fg transition-colors duration-300 hover:bg-tertiary disabled:opacity-60"
+              />
               <Link
                 to="/learn/community"
                 className="inline-flex items-center gap-2 rounded-md border border-border px-6 py-3 font-sans text-label uppercase tracking-widest text-neutral-200 transition-colors duration-300 hover:border-tertiary hover:text-tertiary"
@@ -109,6 +167,12 @@ export default function LearnPage() {
               >
                 <Sparkle size={16} />
                 Member Lesson Login
+              </Link>
+              <Link
+                to="/contact"
+                className="inline-flex items-center gap-2 rounded-md border border-border px-6 py-3 font-sans text-label uppercase tracking-widest text-neutral-200 transition-colors duration-300 hover:border-tertiary hover:text-tertiary"
+              >
+                Family Questions
               </Link>
             </div>
           </div>

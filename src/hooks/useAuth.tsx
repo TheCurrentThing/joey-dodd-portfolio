@@ -10,6 +10,8 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInMember: (email: string, password: string) => Promise<{ error: any }>;
+  signUpMember: (email: string, password: string) => Promise<{ data?: any; error: any }>;
+  refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -103,6 +105,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
+  const signUpMember = async (email: string, password: string) => {
+    const { data, error } = await auth.signUpMember(email, password);
+    return { data, error };
+  };
+
+  const refreshProfile = async () => {
+    await syncProfile(user);
+  };
+
   const signOut = async () => {
     await auth.signOut();
   };
@@ -117,6 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signIn,
         signInMember,
+        signUpMember,
+        refreshProfile,
         signOut,
       }}
     >

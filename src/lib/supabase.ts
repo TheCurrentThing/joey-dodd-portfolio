@@ -89,6 +89,28 @@ export const auth = {
     return { data, error };
   },
 
+  signUpMember: async (email: string, password: string) => {
+    if (SUPABASE_CONFIG_ERROR) {
+      return {
+        data: null,
+        error: new Error(SUPABASE_CONFIG_ERROR),
+      };
+    }
+
+    const emailRedirectTo =
+      typeof window !== "undefined" ? `${window.location.origin}/learn/login` : undefined;
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo,
+      },
+    });
+
+    return { data, error };
+  },
+
   signOut: async () => {
     if (SUPABASE_CONFIG_ERROR) {
       return { error: new Error(SUPABASE_CONFIG_ERROR) };
