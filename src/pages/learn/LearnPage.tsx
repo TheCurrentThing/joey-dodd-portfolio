@@ -4,9 +4,9 @@ import { ArrowRight, Palette, Sparkle } from "@phosphor-icons/react";
 import type { LessonModule } from "../../types/lesson";
 import { fetchPublishedLessonModules } from "../../lib/lessons/queries";
 import LessonCard from "../../components/lessons/LessonCard";
+import doodlesLogo from "../../assets/doodles-design-school-logo-v2.png";
 
 const ALL_FILTER = "All";
-const DOODLES_LOGO = "/branding/doodles-design-school-logo.png";
 
 export default function LearnPage() {
   const [modules, setModules] = useState<LessonModule[]>([]);
@@ -70,9 +70,9 @@ export default function LearnPage() {
               Art Lessons For Kids
             </p>
             <img
-              src={DOODLES_LOGO}
+              src={doodlesLogo}
               alt="Doodles Design School"
-              className="mt-6 h-auto w-full max-w-[32rem] opacity-95 sm:max-w-[42rem] lg:w-[165%] lg:max-w-none xl:w-[175%]"
+              className="mt-6 block h-auto w-full max-w-[34rem] opacity-95 sm:max-w-[44rem] lg:max-w-[60rem] xl:max-w-[68rem]"
             />
             <div className="mt-5 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.35em] text-amber-200">
               Coming Soon: The full lesson library is still being prepared.
