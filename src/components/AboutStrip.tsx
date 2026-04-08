@@ -55,20 +55,39 @@ export default function AboutStrip() {
                 About
               </p>
               <h2 className="mb-6 font-serif text-h2 text-foreground md:text-4xl">
-                Crafting worlds, one stroke at a time.
+                Built on fundamentals, shaped by industry experience.
               </h2>
             </div>
             <p className="about-animate font-sans text-body-lg font-light leading-relaxed text-neutral-200">
-              Joey Dodd is a visual artist and illustrator specializing in
-              character design, concept art, and world-building. With a passion
-              for storytelling through imagery, Joey brings imagination to life
-              with a distinctive blend of organic texture and cinematic
-              atmosphere.
+              Joey Dodd is a senior illustrator and concept artist specializing
+              in character design, visual storytelling, and world-building. He
+              spent over 15 years as a senior designer at Hasbro, contributing
+              to the development of globally recognized brands and building a
+              deep understanding of design, production, and visual storytelling
+              at scale.
             </p>
             <p className="about-animate font-sans text-body-lg font-light leading-relaxed text-neutral-300">
-              Working across traditional and digital mediums, each piece is
-              crafted with intention, balancing technical precision with
-              emotional resonance.
+              Joey studied at the American Academy of Art College in Chicago,
+              where he developed a strong foundation in drawing, composition,
+              and form, skills that continue to define his work today. Working
+              professionally as an independent artist, he has created published
+              work for major comic publishers including Marvel Comics and DC
+              Comics.
+            </p>
+            <p className="about-animate font-sans text-body-lg font-light leading-relaxed text-neutral-300">
+              His portfolio spans character design, illustration, product art,
+              and conceptual development, blending strong fundamentals with
+              imaginative execution. His work has also reached collectors
+              through Sotheby's, placing it within one of the most respected
+              art markets in the world.
+            </p>
+            <p className="about-animate font-sans text-body-lg font-light leading-relaxed text-neutral-300">
+              In 2024, Joey created INK on Bitcoin, the top-selling NFT art
+              collection of the year, establishing a strong presence in the
+              emerging digital and collectible art space. Alongside his
+              professional work, Joey is building a structured lesson platform
+              focused on teaching foundational art skills to the next
+              generation, helping students develop real ability, not shortcuts.
             </p>
             <div className="about-animate pt-2">
               <Link
