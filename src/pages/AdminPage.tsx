@@ -19,6 +19,7 @@ import { projectImageService, projectService } from "../lib/database";
 import { isVideoUrl, uniqueMediaUrls } from "../lib/media";
 import { getPublicUrl, listImages, uploadImage } from "../lib/storage";
 import type { ProjectWithImages } from "../types/project";
+import AdminPortalNav from "../components/admin/AdminPortalNav";
 
 const BROWSE_FOLDERS = ["projects", "thumbnails", "heroes", "gallery"];
 const CATEGORIES = [
@@ -1371,6 +1372,8 @@ export default function AdminPage() {
             Sign Out
           </button>
         </div>
+
+        <AdminPortalNav />
 
         {error && (
           <div className="mb-6 flex items-start justify-between gap-3 rounded-lg border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">

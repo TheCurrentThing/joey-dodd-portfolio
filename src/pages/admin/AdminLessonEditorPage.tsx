@@ -12,6 +12,7 @@ import { fetchAdminLessonEditor, fetchAdminLessonModules } from "../../lib/lesso
 import { normalizeSortOrder } from "../../lib/lessons/ordering";
 import { useUnsavedChangesWarning } from "../../hooks/useUnsavedChangesWarning";
 import LessonContentView from "../../components/lessons/LessonContentView";
+import AdminPortalNav from "../../components/admin/AdminPortalNav";
 import FormField from "../../components/admin/FormField";
 import MediaPicker from "../../components/admin/MediaPicker";
 import LessonBlockEditor, { createLessonBlock } from "../../components/admin/LessonBlockEditor";
@@ -272,6 +273,8 @@ export default function AdminLessonEditorPage() {
             </button>
           </div>
         </div>
+
+        <AdminPortalNav />
 
         {error && (
           <div className="mb-6 rounded-lg border border-red-500/20 bg-red-950/20 px-4 py-3 text-sm text-red-200">

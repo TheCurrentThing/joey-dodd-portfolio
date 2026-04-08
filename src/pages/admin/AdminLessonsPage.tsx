@@ -4,6 +4,7 @@ import { Plus, MagnifyingGlass, TrashSimple } from "@phosphor-icons/react";
 import type { LessonModule } from "../../types/lesson";
 import { deleteLessonModule } from "../../lib/lessons/admin";
 import { fetchAdminLessonModules } from "../../lib/lessons/queries";
+import AdminPortalNav from "../../components/admin/AdminPortalNav";
 
 export default function AdminLessonsPage() {
   const [modules, setModules] = useState<LessonModule[]>([]);
@@ -78,6 +79,8 @@ export default function AdminLessonsPage() {
             New Lesson Module
           </Link>
         </div>
+
+        <AdminPortalNav />
 
         <div className="grid gap-4 rounded-2xl border border-border bg-secondary p-5 md:grid-cols-[minmax(0,1fr)_auto]">
           <label className="relative block">

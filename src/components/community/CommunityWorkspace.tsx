@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabase";
 import { canAccessCommunity, COMMUNITY_CHANNELS, createCommunityMessage, deleteCommunityMessage, fetchCommunityMessages, getCommunityAuthorRole, getCommunityChannel, getCommunityDisplayName } from "../../lib/community";
 import type { CommunityChannel, CommunityChannelSlug, CommunityMessage } from "../../types/community";
 import { useAuth } from "../../hooks/useAuth";
+import AdminPortalNav from "../admin/AdminPortalNav";
 
 function formatTimestamp(value: string) {
   return new Date(value).toLocaleString([], {
@@ -212,6 +213,8 @@ export default function CommunityWorkspace({
             <p className="mt-3 max-w-3xl text-sm text-neutral-400">{subtitle}</p>
           </div>
         </div>
+
+        {mode === "admin" && <AdminPortalNav />}
 
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="rounded-2xl border border-border bg-secondary p-4">
