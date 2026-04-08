@@ -1347,12 +1347,20 @@ export default function AdminPage() {
               flattening the presentation layer.
             </p>
             <div className="mt-4">
-              <Link
-                to="/admin/lessons"
-                className="inline-flex items-center gap-2 rounded border border-neutral-700 px-4 py-2 font-mono text-xs uppercase tracking-[0.25em] text-neutral-300 transition-colors duration-300 hover:border-amber-500 hover:text-amber-300"
-              >
-                Open Lessons Manager
-              </Link>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  to="/admin/lessons"
+                  className="inline-flex items-center gap-2 rounded border border-neutral-700 px-4 py-2 font-mono text-xs uppercase tracking-[0.25em] text-neutral-300 transition-colors duration-300 hover:border-amber-500 hover:text-amber-300"
+                >
+                  Open Lessons Manager
+                </Link>
+                <Link
+                  to="/admin/community"
+                  className="inline-flex items-center gap-2 rounded border border-neutral-700 px-4 py-2 font-mono text-xs uppercase tracking-[0.25em] text-neutral-300 transition-colors duration-300 hover:border-amber-500 hover:text-amber-300"
+                >
+                  Open Community Control
+                </Link>
+              </div>
             </div>
           </div>
           <button

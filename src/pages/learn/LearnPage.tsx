@@ -92,6 +92,12 @@ export default function LearnPage() {
                 <ArrowRight size={16} />
               </Link>
               <Link
+                to="/learn/community"
+                className="inline-flex items-center gap-2 rounded-md border border-border px-6 py-3 font-sans text-label uppercase tracking-widest text-neutral-200 transition-colors duration-300 hover:border-tertiary hover:text-tertiary"
+              >
+                Community Studio
+              </Link>
+              <Link
                 to="/learn/login"
                 className="inline-flex items-center gap-2 rounded-md border border-border px-6 py-3 font-sans text-label uppercase tracking-widest text-neutral-200 transition-colors duration-300 hover:border-tertiary hover:text-tertiary"
               >

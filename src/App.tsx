@@ -11,8 +11,10 @@ import LoginPage from "./pages/LoginPage";
 import LearnPage from "./pages/learn/LearnPage";
 import LearnLoginPage from "./pages/learn/LearnLoginPage";
 import LessonModulePage from "./pages/learn/LessonModulePage";
+import CommunityPage from "./pages/learn/CommunityPage";
 import AdminLessonsPage from "./pages/admin/AdminLessonsPage";
 import AdminLessonEditorPage from "./pages/admin/AdminLessonEditorPage";
+import AdminCommunityPage from "./pages/admin/AdminCommunityPage";
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
 
@@ -29,6 +31,7 @@ function AppContent() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/learn" element={<LearnPage />} />
           <Route path="/learn/login" element={<LearnLoginPage />} />
+          <Route path="/learn/community" element={<CommunityPage />} />
           <Route path="/learn/module/:slug" element={<LessonModulePage />} />
           <Route
             path="/admin"
@@ -59,6 +62,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <AdminLessonEditorPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/community"
+            element={
+              <ProtectedRoute>
+                <AdminCommunityPage />
               </ProtectedRoute>
             }
           />

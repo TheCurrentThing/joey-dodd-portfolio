@@ -3,6 +3,13 @@ type OrderedItem = {
   sort_order: number;
 };
 
+function assignSequentialSortOrder<T extends OrderedItem>(items: T[]) {
+  return items.map((item, index) => ({
+    ...item,
+    sort_order: index,
+  }));
+}
+
 export function sortBySortOrder<T extends OrderedItem>(items: T[]) {
   return [...items].sort((left, right) => {
     if (left.sort_order === right.sort_order) {
@@ -14,10 +21,7 @@ export function sortBySortOrder<T extends OrderedItem>(items: T[]) {
 }
 
 export function normalizeSortOrder<T extends OrderedItem>(items: T[]) {
-  return sortBySortOrder(items).map((item, index) => ({
-    ...item,
-    sort_order: index,
-  }));
+  return assignSequentialSortOrder(sortBySortOrder(items));
 }
 
 export function moveOrderedItem<T extends OrderedItem>(items: T[], from: number, to: number) {
@@ -33,7 +37,7 @@ export function moveOrderedItem<T extends OrderedItem>(items: T[], from: number,
   const [item] = next.splice(boundedFrom, 1);
   next.splice(boundedTo, 0, item);
 
-  return normalizeSortOrder(next);
+  return assignSequentialSortOrder(next);
 }
 
 export function duplicateOrderedItem<T extends OrderedItem>(
@@ -49,5 +53,5 @@ export function duplicateOrderedItem<T extends OrderedItem>(
 
   const next = [...ordered];
   next.splice(index + 1, 0, createDuplicate(ordered[index]));
-  return normalizeSortOrder(next);
+  return assignSequentialSortOrder(next);
 }
