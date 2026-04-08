@@ -8,6 +8,7 @@ import { projects } from "../lib/database";
 import { REFERENCE_MEDIA } from "../lib/referenceMedia";
 import FeaturedGrid from "../components/FeaturedGrid";
 import AboutStrip from "../components/AboutStrip";
+import DoodlesDesignSchoolHero from "../components/DoodlesDesignSchoolHero";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -107,6 +108,8 @@ export default function HomePage() {
 
   return (
     <>
+      <DoodlesDesignSchoolHero />
+
       <section
         id="home"
         className="relative flex min-h-screen items-center justify-center overflow-hidden"
