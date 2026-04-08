@@ -6,6 +6,7 @@ import { fetchPublishedLessonModules } from "../../lib/lessons/queries";
 import LessonCard from "../../components/lessons/LessonCard";
 
 const ALL_FILTER = "All";
+const DOODLES_LOGO = "/branding/doodles-design-school-logo.png";
 
 export default function LearnPage() {
   const [modules, setModules] = useState<LessonModule[]>([]);
@@ -68,6 +69,11 @@ export default function LearnPage() {
             <p className="font-mono text-xs uppercase tracking-[0.4em] text-tertiary">
               Art Lessons For Kids
             </p>
+            <img
+              src={DOODLES_LOGO}
+              alt="Doodles Design School"
+              className="mt-6 h-auto w-full max-w-[24rem] opacity-95"
+            />
             <div className="mt-5 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.35em] text-amber-200">
               Coming Soon: The full lesson library is still being prepared.
             </div>
