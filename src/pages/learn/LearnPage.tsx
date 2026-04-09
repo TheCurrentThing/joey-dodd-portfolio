@@ -134,7 +134,7 @@ export default function LearnPage() {
               Coming Soon: The full lesson library is still being prepared.
             </div>
             <h1 className="mt-5 max-w-3xl font-serif text-5xl leading-tight text-foreground md:text-6xl">
-              A warm, guided studio space for young artists to keep making.
+              A warm, guided studio space for young artists to learn and grow.
             </h1>
             <p className="mt-6 max-w-2xl font-sans text-body-lg font-light leading-relaxed text-neutral-300">
               Each lesson is built like a thoughtful studio session: clear steps, visual examples,
