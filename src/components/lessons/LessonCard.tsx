@@ -4,15 +4,36 @@ import type { LessonModule } from "../../types/lesson";
 import { normalizeLessonPublicAssetUrl } from "../../lib/lessons/media";
 import LessonTagRow from "./LessonTagRow";
 
+function formatPrice(priceCents: number | null) {
+  if (!priceCents || priceCents <= 0) {
+    return null;
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(priceCents / 100);
+}
+
 export default function LessonCard({ module }: { module: LessonModule }) {
   const coverUrl = module.cover_image_url
     ? normalizeLessonPublicAssetUrl("cover", module.cover_image_url)
     : "";
+  const priceLabel = formatPrice(module.price_cents);
 
   return (
     <article className="group overflow-hidden rounded-xl border border-border bg-secondary">
       <Link to={`/learn/module/${module.slug}`} className="block">
-        <div className="aspect-[4/3] overflow-hidden bg-neutral-800">
+        <div className="relative aspect-[4/3] overflow-hidden bg-neutral-800">
+          {!module.is_free && priceLabel && (
+            <div className="absolute left-4 top-4 z-10 rounded-lg border border-amber-400/30 bg-black/70 px-4 py-2 shadow-lg backdrop-blur-sm">
+              <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-amber-200">
+                Module
+              </p>
+              <p className="mt-1 font-serif text-2xl leading-none text-white">{priceLabel}</p>
+            </div>
+          )}
           {coverUrl ? (
             <img
               src={coverUrl}
