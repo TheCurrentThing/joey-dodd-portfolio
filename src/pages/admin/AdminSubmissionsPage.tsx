@@ -8,6 +8,7 @@ import {
   updateLessonSubmissionReview,
 } from "../../lib/lessonSubmissions";
 import AdminPortalNav from "../../components/admin/AdminPortalNav";
+import SubmissionStars from "../../components/lessons/SubmissionStars";
 
 const FILTER_OPTIONS: Array<LessonSubmissionStatus | "all"> = [
   "all",
@@ -142,16 +143,9 @@ function SubmissionReviewCard({
           </label>
           <div>
             <label className="font-mono text-[10px] uppercase tracking-[0.25em] text-amber-300">Stars</label>
-            <select
-              value={starCount}
-              onChange={(event) => setStarCount(Number(event.target.value) || 0)}
-              className="mt-2 w-full rounded-md border border-border bg-neutral-900 px-4 py-3 text-white focus:border-tertiary focus:outline-none"
-            >
-              <option value={0}>0 Stars</option>
-              <option value={1}>1 Star</option>
-              <option value={2}>2 Stars</option>
-              <option value={3}>3 Stars</option>
-            </select>
+            <div className="mt-2 rounded-xl border border-border bg-neutral-950/40 px-3 py-3">
+              <SubmissionStars count={starCount} interactive onChange={setStarCount} showLabel />
+            </div>
           </div>
         </div>
 

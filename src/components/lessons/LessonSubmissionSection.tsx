@@ -14,6 +14,7 @@ import type {
   StudentBadge,
 } from "../../types/submission";
 import { getCommunityDisplayName } from "../../lib/community";
+import SubmissionStars from "./SubmissionStars";
 
 const MAX_SUBMISSION_FILES = 3;
 
@@ -323,7 +324,10 @@ export default function LessonSubmissionSection({ module }: { module: LessonModu
           <div className="mt-6 grid gap-4 rounded-2xl border border-border bg-neutral-950/40 p-5 lg:grid-cols-[220px_minmax(0,1fr)]">
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-4">
               <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-amber-200">Total Stars</p>
-              <p className="mt-2 font-serif text-3xl text-white">{totalStars}</p>
+              <div className="mt-3">
+                <SubmissionStars count={Math.min(totalStars, 3)} showLabel={false} size={20} />
+              </div>
+              <p className="mt-3 font-serif text-3xl text-white">{totalStars}</p>
             </div>
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-neutral-500">Earned Badges</p>
@@ -361,9 +365,9 @@ export default function LessonSubmissionSection({ module }: { module: LessonModu
                         {submission.status.replace("_", " ")}
                       </span>
                       {submission.star_count > 0 && (
-                        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.25em] text-amber-200">
-                          {submission.star_count} {submission.star_count === 1 ? "Star" : "Stars"}
-                        </span>
+                        <div className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1">
+                          <SubmissionStars count={submission.star_count} size={14} />
+                        </div>
                       )}
                     </div>
                     <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">
