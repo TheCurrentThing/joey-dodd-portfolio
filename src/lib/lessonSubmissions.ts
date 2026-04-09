@@ -88,7 +88,9 @@ export async function createLessonSubmission(userId: string, input: LessonSubmis
     const uploadResult = await uploadBucketFile(
       file,
       LESSON_SUBMISSION_BUCKET,
-      `${userId}/${input.moduleId}/${submission.id}`
+      `${userId}/${input.moduleId}/${submission.id}`,
+      undefined,
+      { upsert: false }
     );
 
     if (!uploadResult.success) {

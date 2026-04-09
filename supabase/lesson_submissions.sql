@@ -187,7 +187,26 @@ create policy "lesson submission object insert"
     bucket_id = 'lesson-submissions'
     and (
       public.is_admin()
-      or coalesce((storage.foldername(name))[1], '') = auth.uid()::text
+      or split_part(name, '/', 1) = auth.uid()::text
+    )
+  );
+
+drop policy if exists "lesson submission object update" on storage.objects;
+create policy "lesson submission object update"
+  on storage.objects
+  for update
+  using (
+    bucket_id = 'lesson-submissions'
+    and (
+      public.is_admin()
+      or split_part(name, '/', 1) = auth.uid()::text
+    )
+  )
+  with check (
+    bucket_id = 'lesson-submissions'
+    and (
+      public.is_admin()
+      or split_part(name, '/', 1) = auth.uid()::text
     )
   );
 

@@ -34,7 +34,10 @@ export async function uploadBucketFile(
   file: File,
   bucket: string,
   folder: string,
-  fileName?: string
+  fileName?: string,
+  options?: {
+    upsert?: boolean;
+  }
 ): Promise<UploadResult> {
   const ext = file.name.split(".").pop() ?? "bin";
   const safeName = fileName
@@ -44,7 +47,10 @@ export async function uploadBucketFile(
 
   const { error } = await supabase.storage
     .from(bucket)
-    .upload(storagePath, file, { upsert: true, contentType: file.type });
+    .upload(storagePath, file, {
+      upsert: options?.upsert ?? true,
+      contentType: file.type,
+    });
 
   if (error) {
     return { success: false, error: error.message };
