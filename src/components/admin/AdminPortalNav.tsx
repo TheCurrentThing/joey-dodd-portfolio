@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 const ADMIN_PORTAL_LINKS = [
   { label: "Portfolio", href: "/admin" },
   { label: "Lessons", href: "/admin/lessons" },
+  { label: "Submissions", href: "/admin/submissions" },
   { label: "Community", href: "/admin/community" },
 ];
 

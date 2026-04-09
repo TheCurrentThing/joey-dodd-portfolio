@@ -21,3 +21,12 @@ export type {
   ResolvedVideoSource,
   VideoBlockSettings,
 } from "./lesson";
+export type {
+  AdminLessonSubmission,
+  LessonSubmission,
+  LessonSubmissionAsset,
+  LessonSubmissionInput,
+  LessonSubmissionStatus,
+  LessonSubmissionWithAssets,
+  ResolvedLessonSubmissionAsset,
+} from "./submission";

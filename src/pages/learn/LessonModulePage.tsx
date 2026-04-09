@@ -13,6 +13,7 @@ import {
 } from "../../lib/lessons/queries";
 import LessonContentView from "../../components/lessons/LessonContentView";
 import LessonPaywall from "../../components/lessons/LessonPaywall";
+import LessonSubmissionSection from "../../components/lessons/LessonSubmissionSection";
 import LessonTagRow from "../../components/lessons/LessonTagRow";
 
 export default function LessonModulePage() {
@@ -180,7 +181,10 @@ export default function LessonModulePage() {
           ) : contentLoading ? (
             <div className="py-16 text-center text-neutral-400">Loading lesson content...</div>
           ) : (
-            <LessonContentView module={module} blocks={blocks} resources={resources} />
+            <div className="space-y-12">
+              <LessonContentView module={module} blocks={blocks} resources={resources} />
+              <LessonSubmissionSection module={module} />
+            </div>
           )}
         </div>
 

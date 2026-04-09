@@ -23,6 +23,8 @@ const lessonPrivateMediaBucket =
   import.meta.env.VITE_SUPABASE_LESSON_PRIVATE_MEDIA_BUCKET || "lesson-private-media";
 const lessonPrivateResourceBucket =
   import.meta.env.VITE_SUPABASE_LESSON_PRIVATE_RESOURCE_BUCKET || "lesson-private-resources";
+const lessonSubmissionBucket =
+  import.meta.env.VITE_SUPABASE_LESSON_SUBMISSION_BUCKET || "lesson-submissions";
 
 export const SUPABASE_CONFIG_ERROR =
   !supabaseUrl || !supabaseKey
@@ -44,6 +46,7 @@ export const LESSON_COVER_BUCKET = lessonCoverBucket;
 export const LESSON_PUBLIC_MEDIA_BUCKET = lessonPublicMediaBucket;
 export const LESSON_PRIVATE_MEDIA_BUCKET = lessonPrivateMediaBucket;
 export const LESSON_PRIVATE_RESOURCE_BUCKET = lessonPrivateResourceBucket;
+export const LESSON_SUBMISSION_BUCKET = lessonSubmissionBucket;
 
 export type Profile = {
   id: string;

@@ -1361,6 +1361,12 @@ export default function AdminPage() {
                 >
                   Open Community Control
                 </Link>
+                <Link
+                  to="/admin/submissions"
+                  className="inline-flex items-center gap-2 rounded border border-neutral-700 px-4 py-2 font-mono text-xs uppercase tracking-[0.25em] text-neutral-300 transition-colors duration-300 hover:border-amber-500 hover:text-amber-300"
+                >
+                  Open Critique Queue
+                </Link>
               </div>
             </div>
           </div>

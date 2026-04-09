@@ -15,6 +15,7 @@ import CommunityPage from "./pages/learn/CommunityPage";
 import AdminLessonsPage from "./pages/admin/AdminLessonsPage";
 import AdminLessonEditorPage from "./pages/admin/AdminLessonEditorPage";
 import AdminCommunityPage from "./pages/admin/AdminCommunityPage";
+import AdminSubmissionsPage from "./pages/admin/AdminSubmissionsPage";
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
 
@@ -62,6 +63,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <AdminLessonEditorPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/submissions"
+            element={
+              <ProtectedRoute>
+                <AdminSubmissionsPage />
               </ProtectedRoute>
             }
           />
