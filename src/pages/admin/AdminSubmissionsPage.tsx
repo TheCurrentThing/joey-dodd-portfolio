@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { TrashSimple } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
 import type { AdminLessonSubmission, LessonSubmissionStatus } from "../../types/submission";
-import { fetchAdminLessonSubmissions, updateLessonSubmissionReview } from "../../lib/lessonSubmissions";
+import {
+  deleteLessonSubmission,
+  fetchAdminLessonSubmissions,
+  updateLessonSubmissionReview,
+} from "../../lib/lessonSubmissions";
 import AdminPortalNav from "../../components/admin/AdminPortalNav";
 
 const FILTER_OPTIONS: Array<LessonSubmissionStatus | "all"> = [
@@ -37,9 +42,11 @@ function statusTone(status: LessonSubmissionStatus) {
 function SubmissionReviewCard({
   submission,
   onSaved,
+  onDeleted,
 }: {
   submission: AdminLessonSubmission;
   onSaved: (nextSubmission: AdminLessonSubmission) => void;
+  onDeleted: (submissionId: string) => void;
 }) {
   const [status, setStatus] = useState<LessonSubmissionStatus>(submission.status);
   const [staffFeedback, setStaffFeedback] = useState(submission.staff_feedback ?? "");
@@ -151,36 +158,64 @@ function SubmissionReviewCard({
         <p className="text-xs text-neutral-500">
           {submission.reviewed_at ? `Last reviewed ${formatTimestamp(submission.reviewed_at)}` : "Not reviewed yet"}
         </p>
-        <button
-          type="button"
-          disabled={saving}
-          onClick={async () => {
-            setSaving(true);
-            setError(null);
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={async () => {
+              if (!window.confirm("Delete this submission and its attached images?")) {
+                return;
+              }
 
-            const { data, error: requestError } = await updateLessonSubmissionReview({
-              submissionId: submission.id,
-              status,
-              staffFeedback,
-              featured,
-            });
+              setSaving(true);
+              setError(null);
 
-            setSaving(false);
+              const { error: deleteError } = await deleteLessonSubmission(submission.id);
 
-            if (requestError || !data) {
-              setError(requestError?.message || "Failed to save critique review.");
-              return;
-            }
+              setSaving(false);
 
-            onSaved({
-              ...submission,
-              ...data,
-            });
-          }}
-          className="rounded-md bg-cta-primary-bg px-5 py-3 font-sans text-xs uppercase tracking-widest text-cta-primary-fg transition-colors duration-300 hover:bg-tertiary disabled:opacity-60"
-        >
-          {saving ? "Saving..." : "Save Review"}
-        </button>
+              if (deleteError) {
+                setError(deleteError.message);
+                return;
+              }
+
+              onDeleted(submission.id);
+            }}
+            className="inline-flex items-center gap-2 rounded-md border border-red-500/30 px-4 py-3 font-sans text-xs uppercase tracking-widest text-red-200 transition-colors duration-300 hover:bg-red-500/10 disabled:opacity-60"
+          >
+            <TrashSimple size={14} />
+            Delete
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true);
+              setError(null);
+
+              const { data, error: requestError } = await updateLessonSubmissionReview({
+                submissionId: submission.id,
+                status,
+                staffFeedback,
+                featured,
+              });
+
+              setSaving(false);
+
+              if (requestError || !data) {
+                setError(requestError?.message || "Failed to save critique review.");
+                return;
+              }
+
+              onSaved({
+                ...submission,
+                ...data,
+              });
+            }}
+            className="rounded-md bg-cta-primary-bg px-5 py-3 font-sans text-xs uppercase tracking-widest text-cta-primary-fg transition-colors duration-300 hover:bg-tertiary disabled:opacity-60"
+          >
+            {saving ? "Saving..." : "Save Review"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -298,6 +333,9 @@ export default function AdminSubmissionsPage() {
                   setSubmissions((current) =>
                     current.map((item) => (item.id === nextSubmission.id ? nextSubmission : item))
                   );
+                }}
+                onDeleted={(submissionId) => {
+                  setSubmissions((current) => current.filter((item) => item.id !== submissionId));
                 }}
               />
             ))}

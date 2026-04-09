@@ -273,3 +273,38 @@ export async function updateLessonSubmissionReview(input: {
     error: error ? new Error(error.message) : null,
   };
 }
+
+export async function deleteLessonSubmission(submissionId: string) {
+  const { data: assets, error: assetLookupError } = await supabase
+    .from("lesson_submission_assets")
+    .select("storage_path")
+    .eq("submission_id", submissionId);
+
+  if (assetLookupError) {
+    return {
+      error: new Error(assetLookupError.message),
+    };
+  }
+
+  const assetPaths = ((assets as Array<{ storage_path: string }> | null) ?? [])
+    .map((asset) => asset.storage_path)
+    .filter(Boolean);
+
+  if (assetPaths.length > 0) {
+    const { error: storageError } = await supabase.storage
+      .from(LESSON_SUBMISSION_BUCKET)
+      .remove(assetPaths);
+
+    if (storageError) {
+      return {
+        error: new Error(storageError.message),
+      };
+    }
+  }
+
+  const { error } = await supabase.from("lesson_submissions").delete().eq("id", submissionId);
+
+  return {
+    error: error ? new Error(error.message) : null,
+  };
+}
