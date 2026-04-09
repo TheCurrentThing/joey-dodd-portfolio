@@ -42,6 +42,8 @@ function toEditorState(module: LessonModule & { blocks: any[]; resources: any[] 
       short_description: module.short_description ?? "",
       cover_image_url: module.cover_image_url ?? "",
       is_free: module.is_free,
+      stripe_price_id: module.stripe_price_id ?? "",
+      price_cents: module.price_cents ?? 0,
       is_published: module.is_published,
       sort_order: module.sort_order,
       category: module.category ?? "",
@@ -67,6 +69,8 @@ function toPreviewModule(module: LessonEditorState["module"]): LessonModule {
     ...module,
     short_description: module.short_description || null,
     cover_image_url: module.cover_image_url || null,
+    stripe_price_id: module.stripe_price_id || null,
+    price_cents: module.is_free ? 0 : module.price_cents || 0,
     category: module.category || null,
     level: module.level || null,
     age_range: module.age_range || null,
@@ -420,6 +424,55 @@ export default function AdminLessonEditorPage() {
                     className="w-full rounded-md border border-border bg-neutral-900 px-4 py-3 text-white focus:border-tertiary focus:outline-none"
                   />
                 </FormField>
+                <FormField label="Price (USD)" helperText="Used for paid modules only.">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={
+                      editorState.module.is_free
+                        ? "0.00"
+                        : editorState.module.price_cents > 0
+                          ? (editorState.module.price_cents / 100).toFixed(2)
+                          : ""
+                    }
+                    onChange={(event) =>
+                      setEditorState((current) =>
+                        current
+                          ? {
+                              ...current,
+                              module: {
+                                ...current.module,
+                                price_cents: Math.max(
+                                  0,
+                                  Math.round((Number(event.target.value) || 0) * 100)
+                                ),
+                              },
+                            }
+                          : current
+                      )
+                    }
+                    disabled={editorState.module.is_free}
+                    className="w-full rounded-md border border-border bg-neutral-900 px-4 py-3 text-white focus:border-tertiary focus:outline-none disabled:opacity-50"
+                  />
+                </FormField>
+                <FormField label="Stripe Price ID" helperText="The Stripe one-time price for this module.">
+                  <input
+                    value={editorState.module.stripe_price_id ?? ""}
+                    onChange={(event) =>
+                      setEditorState((current) =>
+                        current
+                          ? {
+                              ...current,
+                              module: { ...current.module, stripe_price_id: event.target.value },
+                            }
+                          : current
+                      )
+                    }
+                    disabled={editorState.module.is_free}
+                    className="w-full rounded-md border border-border bg-neutral-900 px-4 py-3 text-white focus:border-tertiary focus:outline-none disabled:opacity-50"
+                  />
+                </FormField>
               </div>
 
               <div className="mt-5">
@@ -479,7 +532,14 @@ export default function AdminLessonEditorPage() {
                         current
                           ? {
                               ...current,
-                              module: { ...current.module, is_free: event.target.checked },
+                              module: {
+                                ...current.module,
+                                is_free: event.target.checked,
+                                price_cents: event.target.checked ? 0 : current.module.price_cents,
+                                stripe_price_id: event.target.checked
+                                  ? ""
+                                  : current.module.stripe_price_id,
+                              },
                             }
                           : current
                       )

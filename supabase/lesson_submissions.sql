@@ -21,13 +21,15 @@ create table if not exists public.lesson_submissions (
   status text not null default 'submitted',
   staff_feedback text,
   featured boolean not null default false,
+  star_count integer not null default 0,
   reviewed_at timestamptz,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   constraint lesson_submissions_status_check check (
     status in ('submitted', 'in_review', 'reviewed', 'revision_requested')
   ),
-  constraint lesson_submissions_student_name_check check (char_length(trim(student_name)) between 1 and 60)
+  constraint lesson_submissions_student_name_check check (char_length(trim(student_name)) between 1 and 60),
+  constraint lesson_submissions_star_count_check check (star_count between 0 and 3)
 );
 
 alter table public.lesson_submissions
@@ -44,6 +46,9 @@ alter table public.lesson_submissions
 
 alter table public.lesson_submissions
   add column if not exists featured boolean not null default false;
+
+alter table public.lesson_submissions
+  add column if not exists star_count integer not null default 0;
 
 alter table public.lesson_submissions
   add column if not exists reviewed_at timestamptz;
@@ -103,12 +108,16 @@ create policy "lesson submissions owner insert"
   for insert
   with check (
     auth.uid() = user_id
-    and (public.has_lessons_access() or public.is_admin())
     and exists (
       select 1
       from public.lesson_modules modules
       where modules.id = module_id
         and modules.is_published = true
+        and (
+          modules.is_free = true
+          or public.user_has_module_access(auth.uid(), modules.id)
+          or public.is_admin()
+        )
     )
   );
 

@@ -51,6 +51,7 @@ function SubmissionReviewCard({
   const [status, setStatus] = useState<LessonSubmissionStatus>(submission.status);
   const [staffFeedback, setStaffFeedback] = useState(submission.staff_feedback ?? "");
   const [featured, setFeatured] = useState(submission.featured);
+  const [starCount, setStarCount] = useState(submission.star_count);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +59,7 @@ function SubmissionReviewCard({
     setStatus(submission.status);
     setStaffFeedback(submission.staff_feedback ?? "");
     setFeatured(submission.featured);
+    setStarCount(submission.star_count);
   }, [submission]);
 
   return (
@@ -138,6 +140,19 @@ function SubmissionReviewCard({
             />
             <span className="text-sm text-neutral-200">Mark as feature-worthy</span>
           </label>
+          <div>
+            <label className="font-mono text-[10px] uppercase tracking-[0.25em] text-amber-300">Stars</label>
+            <select
+              value={starCount}
+              onChange={(event) => setStarCount(Number(event.target.value) || 0)}
+              className="mt-2 w-full rounded-md border border-border bg-neutral-900 px-4 py-3 text-white focus:border-tertiary focus:outline-none"
+            >
+              <option value={0}>0 Stars</option>
+              <option value={1}>1 Star</option>
+              <option value={2}>2 Stars</option>
+              <option value={3}>3 Stars</option>
+            </select>
+          </div>
         </div>
 
         <div>
@@ -197,6 +212,7 @@ function SubmissionReviewCard({
                 status,
                 staffFeedback,
                 featured,
+                starCount,
               });
 
               setSaving(false);

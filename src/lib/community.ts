@@ -77,8 +77,13 @@ Not every message gets direct instructor feedback. The goal is a calm, useful st
   },
 ];
 
-export function canAccessCommunity(profile: Profile | null, isAdmin: boolean, hasLessonsAccess: boolean) {
-  return Boolean(isAdmin || profile?.is_admin || hasLessonsAccess);
+export function canAccessCommunity(
+  profile: Profile | null,
+  isAdmin: boolean,
+  hasLessonsAccess: boolean,
+  ownedLessonModuleIds: string[]
+) {
+  return Boolean(isAdmin || profile?.is_admin || hasLessonsAccess || ownedLessonModuleIds.length > 0);
 }
 
 export function getCommunityAuthorRole(isAdmin: boolean): CommunityAuthorRole {

@@ -56,6 +56,16 @@ export type Profile = {
   updated_at?: string;
 };
 
+export type UserLessonAccess = {
+  user_id: string;
+  module_id: string;
+  purchase_id: string | null;
+  source: "purchase" | "admin_grant";
+  granted_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export function isAllowedAdminEmail(email?: string | null) {
   return !!email && ADMIN_EMAILS.includes(email.trim().toLowerCase());
 }
@@ -147,6 +157,32 @@ export const auth = {
       .maybeSingle();
 
     return { profile: (data as Profile | null) ?? null, error };
+  },
+
+  getUserLessonAccess: async (userId: string) => {
+    if (SUPABASE_CONFIG_ERROR) {
+      return {
+        lessonAccess: [],
+        error: new Error(SUPABASE_CONFIG_ERROR),
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("user_lesson_access")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (error && /(does not exist|schema cache|could not find the table)/i.test(error.message)) {
+      return {
+        lessonAccess: [],
+        error: null,
+      };
+    }
+
+    return {
+      lessonAccess: (data as UserLessonAccess[] | null) ?? [],
+      error,
+    };
   },
 
   ensureProfile: async (userId: string) => {

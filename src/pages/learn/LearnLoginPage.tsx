@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
 import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { startMembershipCheckout } from "../../lib/memberships";
+import { startLessonCheckout } from "../../lib/memberships";
 
 export default function LearnLoginPage() {
-  const { user, hasLessonsAccess, signInMember, signUpMember, isAdmin } = useAuth();
+  const { user, hasLessonsAccess, ownedLessonModuleIds, signInMember, signUpMember, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const checkoutIntent = searchParams.get("intent") === "checkout";
+  const checkoutModuleId = searchParams.get("module");
+  const returnTo = searchParams.get("returnTo") || "/learn";
   const initialMode = useMemo(() => (checkoutIntent ? "signup" : "signin"), [checkoutIntent]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,8 +19,18 @@ export default function LearnLoginPage() {
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (user && (hasLessonsAccess || isAdmin)) {
-    return <Navigate to={(location.state as { from?: string } | null)?.from || "/learn"} replace />;
+  if (
+    user &&
+    (isAdmin ||
+      hasLessonsAccess ||
+      (checkoutModuleId ? ownedLessonModuleIds.includes(checkoutModuleId) : false))
+  ) {
+    return (
+      <Navigate
+        to={(location.state as { from?: string } | null)?.from || returnTo}
+        replace
+      />
+    );
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -32,28 +44,28 @@ export default function LearnLoginPage() {
 
       if (requestError) {
         setError(requestError.message);
-      } else if (checkoutIntent) {
-        const { error: checkoutError } = await startMembershipCheckout();
+      } else if (checkoutIntent && checkoutModuleId) {
+        const { error: checkoutError } = await startLessonCheckout(checkoutModuleId, returnTo);
 
         if (checkoutError) {
           setError(checkoutError.message);
         }
       } else {
-        navigate("/learn");
+        navigate(returnTo);
       }
     } else {
       const { data, error: requestError } = await signUpMember(email, password);
 
       if (requestError) {
         setError(requestError.message);
-      } else if (data?.session && checkoutIntent) {
-        const { error: checkoutError } = await startMembershipCheckout();
+      } else if (data?.session && checkoutIntent && checkoutModuleId) {
+        const { error: checkoutError } = await startLessonCheckout(checkoutModuleId, returnTo);
 
         if (checkoutError) {
           setError(checkoutError.message);
         }
       } else if (data?.session) {
-        navigate("/learn");
+        navigate(returnTo);
       } else {
         setNotice(
           "Your account was created. Check your email to confirm your address, then sign in to continue."
@@ -70,16 +82,16 @@ export default function LearnLoginPage() {
       <div className="mx-auto max-w-md rounded-2xl border border-border bg-secondary p-8">
         <p className="font-mono text-xs uppercase tracking-[0.4em] text-tertiary">Lesson Member Login</p>
         <h1 className="mt-4 font-serif text-h2 text-foreground">
-          {mode === "signin" ? "Sign in for art lesson access" : "Create your lesson member account"}
+          {mode === "signin" ? "Sign in for art lesson access" : "Create your lesson account"}
         </h1>
         <p className="mt-3 font-sans text-body-lg font-light leading-relaxed text-neutral-300">
-          This sign-in is for lesson members, parents, and students with library access. Site and
+          This sign-in is for lesson families, parents, and students with lesson access. Site and
           portfolio administration uses the separate admin login.
         </p>
         {checkoutIntent && (
           <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            You&apos;re starting a paid lesson membership. Sign in or create an account first so
-            Stripe can attach the subscription to your lesson library access.
+            You&apos;re starting a paid lesson checkout. Sign in or create an account first so
+            Stripe can attach the purchase to the right lesson account.
           </p>
         )}
         <div className="mt-6 grid grid-cols-2 gap-2 rounded-xl border border-border bg-neutral-950/50 p-1">
@@ -142,7 +154,7 @@ export default function LearnLoginPage() {
                 : "Creating Account..."
               : mode === "signin"
                 ? "Enter Lesson Library"
-                : "Create Member Account"}
+                : "Create Lesson Account"}
           </button>
         </form>
       </div>

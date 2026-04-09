@@ -7,6 +7,7 @@ interface AuthContextType {
   profile: Profile | null;
   isAdmin: boolean;
   hasLessonsAccess: boolean;
+  ownedLessonModuleIds: string[];
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInMember: (email: string, password: string) => Promise<{ error: any }>;
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasLessonsAccess, setHasLessonsAccess] = useState(false);
+  const [ownedLessonModuleIds, setOwnedLessonModuleIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const syncProfile = async (currentUser: User | null) => {
@@ -29,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       setIsAdmin(false);
       setHasLessonsAccess(false);
+      setOwnedLessonModuleIds([]);
       return;
     }
 
@@ -40,13 +43,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         currentProfile = ensured.profile;
       }
 
+      const { lessonAccess, error: lessonAccessError } = await auth.getUserLessonAccess(currentUser.id);
+
+      if (lessonAccessError) {
+        throw lessonAccessError;
+      }
+
       setProfile(currentProfile);
       setIsAdmin(Boolean(currentProfile?.is_admin) || isAllowedAdminEmail(currentUser.email));
       setHasLessonsAccess(Boolean(currentProfile?.has_lessons_access));
+      setOwnedLessonModuleIds(lessonAccess.map((entry) => entry.module_id));
     } catch {
       setProfile(null);
       setIsAdmin(isAllowedAdminEmail(currentUser.email));
       setHasLessonsAccess(false);
+      setOwnedLessonModuleIds([]);
     }
   };
 
@@ -125,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         isAdmin,
         hasLessonsAccess,
+        ownedLessonModuleIds,
         loading,
         signIn,
         signInMember,

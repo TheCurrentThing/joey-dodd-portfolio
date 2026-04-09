@@ -444,6 +444,8 @@ export function createEmptyLessonModule(overrides?: Partial<LessonModuleInput>):
     short_description: "",
     cover_image_url: "",
     is_free: false,
+    stripe_price_id: "",
+    price_cents: 0,
     is_published: false,
     sort_order: 0,
     category: "",

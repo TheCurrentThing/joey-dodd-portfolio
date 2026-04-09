@@ -14,6 +14,7 @@ export type LessonSubmission = {
   status: LessonSubmissionStatus;
   staff_feedback: string | null;
   featured: boolean;
+  star_count: number;
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;
@@ -46,4 +47,14 @@ export type LessonSubmissionInput = {
   studentNote: string;
   feedbackRequest: string;
   files: File[];
+};
+
+export type StudentBadge = {
+  id: string;
+  user_id: string;
+  badge_key: string;
+  badge_label: string;
+  metadata: Record<string, unknown> | null;
+  awarded_at: string;
+  created_at: string;
 };

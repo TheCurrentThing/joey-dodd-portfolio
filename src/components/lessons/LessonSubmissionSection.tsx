@@ -2,9 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle, ImageSquare, Sparkle, UploadSimple } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { createLessonSubmission, fetchUserLessonSubmissions } from "../../lib/lessonSubmissions";
+import {
+  createLessonSubmission,
+  fetchStudentRewardSummary,
+  fetchUserLessonSubmissions,
+} from "../../lib/lessonSubmissions";
 import type { LessonModule } from "../../types/lesson";
-import type { LessonSubmissionStatus, LessonSubmissionWithAssets } from "../../types/submission";
+import type {
+  LessonSubmissionStatus,
+  LessonSubmissionWithAssets,
+  StudentBadge,
+} from "../../types/submission";
 import { getCommunityDisplayName } from "../../lib/community";
 
 const MAX_SUBMISSION_FILES = 3;
@@ -33,24 +41,30 @@ function submissionStatusTone(status: LessonSubmissionStatus) {
 }
 
 export default function LessonSubmissionSection({ module }: { module: LessonModule }) {
-  const { user, hasLessonsAccess, isAdmin, loading: authLoading } = useAuth();
+  const { user, hasLessonsAccess, ownedLessonModuleIds, isAdmin, loading: authLoading } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [studentName, setStudentName] = useState("");
   const [studentNote, setStudentNote] = useState("");
   const [feedbackRequest, setFeedbackRequest] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [submissions, setSubmissions] = useState<LessonSubmissionWithAssets[]>([]);
+  const [badges, setBadges] = useState<StudentBadge[]>([]);
+  const [totalStars, setTotalStars] = useState(0);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const canSubmit = Boolean(user && (hasLessonsAccess || isAdmin));
+  const canSubmit = Boolean(
+    user && (isAdmin || hasLessonsAccess || module.is_free || ownedLessonModuleIds.includes(module.id))
+  );
 
   useEffect(() => {
     if (!user) {
       setStudentName("");
       setSubmissions([]);
+      setBadges([]);
+      setTotalStars(0);
       return;
     }
 
@@ -60,21 +74,30 @@ export default function LessonSubmissionSection({ module }: { module: LessonModu
   useEffect(() => {
     if (!user || !canSubmit) {
       setSubmissions([]);
+      setBadges([]);
+      setTotalStars(0);
       return;
     }
 
     let active = true;
     setLoading(true);
 
-    void fetchUserLessonSubmissions(user.id, module.id).then(({ data, error: requestError }) => {
+    void Promise.all([
+      fetchUserLessonSubmissions(user.id, module.id),
+      fetchStudentRewardSummary(user.id),
+    ]).then(([submissionResult, rewardResult]) => {
       if (!active) {
         return;
       }
 
-      if (requestError) {
-        setError(requestError.message);
+      if (submissionResult.error) {
+        setError(submissionResult.error.message);
+      } else if (rewardResult.error) {
+        setError(rewardResult.error.message);
       } else {
-        setSubmissions(data ?? []);
+        setSubmissions(submissionResult.data ?? []);
+        setBadges(rewardResult.data?.badges ?? []);
+        setTotalStars(rewardResult.data?.totalStars ?? 0);
         setError(null);
       }
 
@@ -134,10 +157,17 @@ export default function LessonSubmissionSection({ module }: { module: LessonModu
     }
 
     setSubmissions(data ?? []);
+
+    const rewardSummary = await fetchStudentRewardSummary(user.id);
+    if (!rewardSummary.error && rewardSummary.data) {
+      setBadges(rewardSummary.data.badges);
+      setTotalStars(rewardSummary.data.totalStars);
+    }
+
     setStudentNote("");
     setFeedbackRequest("");
     setFiles([]);
-    setSuccess("Submission received. It’s now in the lesson review queue.");
+    setSuccess("Submission received. It is now in the lesson review queue.");
   };
 
   return (
@@ -158,20 +188,20 @@ export default function LessonSubmissionSection({ module }: { module: LessonModu
 
       {!authLoading && !canSubmit && (
         <div className="mt-8 rounded-2xl border border-dashed border-border px-6 py-10 text-center">
-          <p className="text-neutral-300">Critique uploads are available to lesson members inside the portal.</p>
+          <p className="text-neutral-300">Critique uploads are available to lesson owners inside the portal.</p>
           <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
-              to="/learn/login?intent=checkout"
+              to={`/learn/login?intent=checkout&module=${encodeURIComponent(module.id)}&returnTo=${encodeURIComponent(`/learn/module/${module.slug}`)}`}
               className="inline-flex items-center gap-2 rounded-md bg-cta-primary-bg px-5 py-3 font-sans text-xs uppercase tracking-widest text-cta-primary-fg"
             >
               <Sparkle size={14} />
-              Create Member Account
+              Create Lesson Account
             </Link>
             <Link
               to="/learn/login"
               className="inline-flex items-center gap-2 rounded-md border border-border px-5 py-3 font-sans text-xs uppercase tracking-widest text-neutral-200"
             >
-              Member Lesson Login
+              Lesson Login
             </Link>
           </div>
         </div>
@@ -289,6 +319,28 @@ export default function LessonSubmissionSection({ module }: { module: LessonModu
           <h3 className="mt-3 font-serif text-h4 text-foreground">Past submissions for this lesson</h3>
         </div>
 
+        {(totalStars > 0 || badges.length > 0) && (
+          <div className="mt-6 grid gap-4 rounded-2xl border border-border bg-neutral-950/40 p-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-amber-200">Total Stars</p>
+              <p className="mt-2 font-serif text-3xl text-white">{totalStars}</p>
+            </div>
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-neutral-500">Earned Badges</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {badges.map((badge) => (
+                  <span
+                    key={badge.id}
+                    className="rounded-full border border-border bg-secondary px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.25em] text-neutral-200"
+                  >
+                    {badge.badge_label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <p className="mt-6 text-neutral-400">Loading submissions...</p>
         ) : submissions.length === 0 ? (
@@ -308,6 +360,11 @@ export default function LessonSubmissionSection({ module }: { module: LessonModu
                       >
                         {submission.status.replace("_", " ")}
                       </span>
+                      {submission.star_count > 0 && (
+                        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.25em] text-amber-200">
+                          {submission.star_count} {submission.star_count === 1 ? "Star" : "Stars"}
+                        </span>
+                      )}
                     </div>
                     <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">
                       Submitted {formatTimestamp(submission.created_at)}

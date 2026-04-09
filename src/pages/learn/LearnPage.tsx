@@ -1,74 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Palette, Sparkle } from "@phosphor-icons/react";
 import type { LessonModule } from "../../types/lesson";
 import { fetchPublishedLessonModules } from "../../lib/lessons/queries";
 import LessonCard from "../../components/lessons/LessonCard";
 import doodlesLogo from "../../assets/doodles-design-school-logo-v2.png";
-import MembershipCheckoutButton from "../../components/lessons/MembershipCheckoutButton";
-import { useAuth } from "../../hooks/useAuth";
 
 const ALL_FILTER = "All";
 
 export default function LearnPage() {
-  const { user, hasLessonsAccess, isAdmin, refreshProfile } = useAuth();
-  const [searchParams] = useSearchParams();
   const [modules, setModules] = useState<LessonModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState(ALL_FILTER);
-  const [syncNotice, setSyncNotice] = useState<string | null>(null);
-
-  useEffect(() => {
-    const billingState = searchParams.get("billing");
-
-    if (billingState === "cancelled") {
-      setSyncNotice("Checkout was cancelled. You can restart membership any time.");
-      return;
-    }
-
-    if (billingState !== "success") {
-      setSyncNotice(null);
-      return;
-    }
-
-    if (isAdmin || hasLessonsAccess) {
-      setSyncNotice("Membership is active. Your lesson library is ready.");
-      return;
-    }
-
-    if (!user) {
-      setSyncNotice("Payment succeeded. Sign in to unlock your lesson library.");
-      return;
-    }
-
-    setSyncNotice("Payment received. We’re syncing your lesson access now.");
-
-    let active = true;
-    let attempts = 0;
-
-    const intervalId = window.setInterval(() => {
-      attempts += 1;
-
-      void refreshProfile().then(() => {
-        if (!active) {
-          return;
-        }
-
-        if (attempts >= 5) {
-          window.clearInterval(intervalId);
-          setSyncNotice(
-            "Payment succeeded, but access is still syncing. Refresh in a moment or sign in again if needed."
-          );
-        }
-      });
-    }, 2500);
-
-    return () => {
-      active = false;
-      window.clearInterval(intervalId);
-    };
-  }, [searchParams, user, hasLessonsAccess, isAdmin, refreshProfile]);
 
   useEffect(() => {
     let active = true;
@@ -138,23 +82,20 @@ export default function LearnPage() {
             </h1>
             <p className="mt-6 max-w-2xl font-sans text-body-lg font-light leading-relaxed text-neutral-300">
               Each lesson is built like a thoughtful studio session: clear steps, visual examples,
-              video guidance, and printable support when it helps. Browse free previews, then log
-              in as a lesson member for the full library.
+              video guidance, and printable support when it helps. Browse free previews first, then
+              unlock individual modules as your student grows.
             </p>
             <p className="mt-4 max-w-2xl font-sans text-sm leading-relaxed text-neutral-400">
               Early preview pages may appear before the full program opens. If you want first
               access when lessons go live, use the contact link below.
             </p>
-            {syncNotice && (
-              <div className="mt-5 inline-flex rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                {syncNotice}
-              </div>
-            )}
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <MembershipCheckoutButton
-                label="Start Membership"
-                className="inline-flex items-center gap-2 rounded-md bg-cta-primary-bg px-6 py-3 font-sans text-label uppercase tracking-widest text-cta-primary-fg transition-colors duration-300 hover:bg-tertiary disabled:opacity-60"
-              />
+              <a
+                href="#lesson-library"
+                className="inline-flex items-center gap-2 rounded-md bg-cta-primary-bg px-6 py-3 font-sans text-label uppercase tracking-widest text-cta-primary-fg transition-colors duration-300 hover:bg-tertiary"
+              >
+                Browse Modules
+              </a>
               <Link
                 to="/learn/community"
                 className="inline-flex items-center gap-2 rounded-md border border-border px-6 py-3 font-sans text-label uppercase tracking-widest text-neutral-200 transition-colors duration-300 hover:border-tertiary hover:text-tertiary"
@@ -166,7 +107,7 @@ export default function LearnPage() {
                 className="inline-flex items-center gap-2 rounded-md border border-border px-6 py-3 font-sans text-label uppercase tracking-widest text-neutral-200 transition-colors duration-300 hover:border-tertiary hover:text-tertiary"
               >
                 <Sparkle size={16} />
-                Member Lesson Login
+                Lesson Login
               </Link>
               <Link
                 to="/contact"
@@ -186,7 +127,7 @@ export default function LearnPage() {
                 <h2 className="font-serif text-h3 text-foreground">What families get</h2>
                 <ul className="mt-4 space-y-3 font-sans text-body-lg font-light text-neutral-300">
                   <li>Project-based modules that are easy to revisit.</li>
-                  <li>Free previews mixed into the full paid library.</li>
+                  <li>Free previews mixed into individually owned paid modules.</li>
                   <li>Clear video, image, and download support where it actually helps.</li>
                 </ul>
               </div>
@@ -195,7 +136,7 @@ export default function LearnPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-screen-xl px-6 py-14 md:px-10 md:py-18">
+      <section id="lesson-library" className="mx-auto max-w-screen-xl px-6 py-14 md:px-10 md:py-18">
         <div className="mb-8 flex flex-wrap gap-2">
           {filters.map((filter) => (
             <button

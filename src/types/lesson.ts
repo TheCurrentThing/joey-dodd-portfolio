@@ -28,6 +28,8 @@ export type LessonModule = {
   short_description: string | null;
   cover_image_url: string | null;
   is_free: boolean;
+  stripe_price_id: string | null;
+  price_cents: number | null;
   is_published: boolean;
   sort_order: number;
   category: string | null;

@@ -54,6 +54,10 @@ export async function saveLessonEditorState(state: LessonEditorState) {
     short_description: normalizedState.module.short_description,
     cover_image_url: normalizedState.module.cover_image_url,
     is_free: normalizedState.module.is_free,
+    stripe_price_id: normalizedState.module.is_free
+      ? null
+      : normalizedState.module.stripe_price_id || null,
+    price_cents: normalizedState.module.is_free ? 0 : normalizedState.module.price_cents || 0,
     is_published: normalizedState.module.is_published,
     sort_order: normalizedState.module.sort_order,
     category: normalizedState.module.category,
@@ -183,6 +187,8 @@ export function normalizeModuleForSave(module: LessonModuleInput) {
     title: module.title.trim(),
     slug: module.slug.trim(),
     short_description: module.short_description?.trim() ?? "",
+    stripe_price_id: module.stripe_price_id?.trim() ?? "",
+    price_cents: Math.max(0, Math.round(module.price_cents || 0)),
     category: module.category?.trim() ?? "",
     level: module.level?.trim() ?? "",
     age_range: module.age_range?.trim() ?? "",

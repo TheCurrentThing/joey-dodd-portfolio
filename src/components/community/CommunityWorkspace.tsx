@@ -48,7 +48,7 @@ export default function CommunityWorkspace({
 }: {
   mode: "member" | "admin";
 }) {
-  const { user, profile, isAdmin, hasLessonsAccess, loading: authLoading } = useAuth();
+  const { user, profile, isAdmin, hasLessonsAccess, ownedLessonModuleIds, loading: authLoading } = useAuth();
   const [selectedChannel, setSelectedChannel] = useState<CommunityChannelSlug>("welcome");
   const [messages, setMessages] = useState<CommunityMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -56,7 +56,7 @@ export default function CommunityWorkspace({
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const activeChannel = getCommunityChannel(selectedChannel);
-  const hasAccess = canAccessCommunity(profile, isAdmin, hasLessonsAccess);
+  const hasAccess = canAccessCommunity(profile, isAdmin, hasLessonsAccess, ownedLessonModuleIds);
   const canPost =
     activeChannel.mode === "chat" &&
     !!user &&

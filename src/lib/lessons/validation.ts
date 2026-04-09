@@ -54,6 +54,16 @@ function validateModule(module: LessonModuleInput) {
     errors.push("Slug is required.");
   }
 
+  if (!module.is_free) {
+    if (!module.stripe_price_id?.trim()) {
+      errors.push("Paid modules need a Stripe price ID.");
+    }
+
+    if (!module.price_cents || module.price_cents <= 0) {
+      errors.push("Paid modules need a valid price greater than $0.");
+    }
+  }
+
   return errors;
 }
 

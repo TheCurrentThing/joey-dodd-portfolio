@@ -8,6 +8,7 @@ import type {
   LessonSubmissionStatus,
   LessonSubmissionWithAssets,
   ResolvedLessonSubmissionAsset,
+  StudentBadge,
 } from "../types/submission";
 
 function normalizeSubmissionName(value: string) {
@@ -230,6 +231,7 @@ export async function fetchAdminLessonSubmissions(status?: LessonSubmissionStatu
       status: row.status,
       staff_feedback: row.staff_feedback,
       featured: row.featured,
+      star_count: row.star_count,
       reviewed_at: row.reviewed_at,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -250,6 +252,7 @@ export async function updateLessonSubmissionReview(input: {
   status: LessonSubmissionStatus;
   staffFeedback: string;
   featured: boolean;
+  starCount: number;
 }) {
   const nextReviewedAt =
     input.status === "reviewed" || input.status === "revision_requested"
@@ -262,15 +265,79 @@ export async function updateLessonSubmissionReview(input: {
       status: input.status,
       staff_feedback: input.staffFeedback.trim() || null,
       featured: input.featured,
+      star_count: Math.max(0, Math.min(3, Math.round(input.starCount))),
       reviewed_at: nextReviewedAt,
     })
     .eq("id", input.submissionId)
     .select("*")
     .single();
 
+  const submission = (data as LessonSubmission | null) ?? null;
+
+  if (!error && submission?.user_id) {
+    const { error: badgeError } = await supabase.rpc("sync_student_badges", {
+      target_user_id: submission.user_id,
+    });
+
+    if (badgeError) {
+      return {
+        data: submission,
+        error: new Error(badgeError.message),
+      };
+    }
+  }
+
   return {
-    data: (data as LessonSubmission | null) ?? null,
+    data: submission,
     error: error ? new Error(error.message) : null,
+  };
+}
+
+export async function fetchStudentBadges(userId: string) {
+  const { data, error } = await supabase
+    .from("student_badges")
+    .select("*")
+    .eq("user_id", userId)
+    .order("awarded_at", { ascending: false });
+
+  return {
+    data: (data as StudentBadge[] | null) ?? [],
+    error: error ? new Error(error.message) : null,
+  };
+}
+
+export async function fetchStudentRewardSummary(userId: string) {
+  const [{ data: submissions, error: submissionError }, { data: badges, error: badgeError }] =
+    await Promise.all([
+      supabase.from("lesson_submissions").select("star_count").eq("user_id", userId),
+      fetchStudentBadges(userId),
+    ]);
+
+  if (submissionError) {
+    return {
+      data: null,
+      error: new Error(submissionError.message),
+    };
+  }
+
+  if (badgeError) {
+    return {
+      data: null,
+      error: badgeError,
+    };
+  }
+
+  const totalStars = (((submissions as Array<{ star_count: number }> | null) ?? [])).reduce(
+    (sum, submission) => sum + (submission.star_count ?? 0),
+    0
+  );
+
+  return {
+    data: {
+      totalStars,
+      badges: badges ?? [],
+    },
+    error: null,
   };
 }
 

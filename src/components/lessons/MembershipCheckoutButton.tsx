@@ -2,32 +2,49 @@ import { useState } from "react";
 import { Sparkle } from "@phosphor-icons/react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { startMembershipCheckout } from "../../lib/memberships";
+import { startLessonCheckout } from "../../lib/memberships";
 
 type MembershipCheckoutButtonProps = {
   className: string;
   icon?: boolean;
   label?: string;
+  moduleId?: string | null;
+  returnTo?: string;
 };
 
 export default function MembershipCheckoutButton({
   className,
   icon = false,
   label,
+  moduleId,
+  returnTo,
 }: MembershipCheckoutButtonProps) {
   const navigate = useNavigate();
-  const { user, isAdmin, hasLessonsAccess } = useAuth();
+  const { user, isAdmin, hasLessonsAccess, ownedLessonModuleIds } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const destination = isAdmin || hasLessonsAccess ? "/learn" : !user ? "/learn/login?intent=checkout" : null;
+  const hasModuleAccess = Boolean(
+    moduleId && (isAdmin || hasLessonsAccess || ownedLessonModuleIds.includes(moduleId))
+  );
+  const destination = hasModuleAccess
+    ? returnTo || "/learn"
+    : !user
+      ? moduleId
+        ? `/learn/login?intent=checkout&module=${encodeURIComponent(moduleId)}${
+            returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""
+          }`
+        : "/learn/login"
+      : !moduleId
+        ? "/learn#lesson-library"
+        : null;
 
   const buttonLabel =
     label ??
-    (isAdmin || hasLessonsAccess
-      ? "Open Lesson Library"
+    (hasModuleAccess
+      ? "Open Lesson"
       : user
-        ? "Start Membership"
-        : "Create Member Account");
+        ? "Get This Module"
+        : "Create Lesson Account");
 
   const handleClick = async () => {
     setError(null);
@@ -39,7 +56,7 @@ export default function MembershipCheckoutButton({
 
     setLoading(true);
 
-    const { error: checkoutError } = await startMembershipCheckout();
+    const { error: checkoutError } = await startLessonCheckout(moduleId!, returnTo);
 
     if (checkoutError) {
       setError(checkoutError.message);

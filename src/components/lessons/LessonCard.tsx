@@ -37,7 +37,7 @@ export default function LessonCard({ module }: { module: LessonModule }) {
             )}
           </div>
           <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.3em] text-tertiary">
-            {module.is_free ? "Start Preview" : "View Lesson"}
+            {module.is_free ? "Start Preview" : "View Module"}
             <ArrowRight size={14} />
           </span>
         </div>
