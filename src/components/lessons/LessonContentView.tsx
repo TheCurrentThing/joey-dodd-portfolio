@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, List, X } from "@phosphor-icons/react";
 import type { LessonBlock, LessonModule, LessonResource, LessonResourceInput } from "../../types/lesson";
-import { normalizeLessonPublicAssetUrl } from "../../lib/lessons/media";
 import LessonBlockRenderer from "./LessonBlockRenderer";
 import LessonTagRow from "./LessonTagRow";
 import ModuleResourceList from "./ModuleResourceList";
@@ -70,9 +69,6 @@ type Props = {
 };
 
 export default function LessonContentView({ module, blocks, resources }: Props) {
-  const coverUrl = module.cover_image_url
-    ? normalizeLessonPublicAssetUrl("cover", module.cover_image_url)
-    : "";
   const groups = groupBlocksIntoSteps(blocks);
   const hasSteps = groups.length > 1;
   const [activeStep, setActiveStep] = useState(0);
@@ -120,12 +116,6 @@ export default function LessonContentView({ module, blocks, resources }: Props) 
             )}
           </div>
         </div>
-
-        {coverUrl && (
-          <div className="overflow-hidden rounded-2xl border border-border bg-secondary">
-            <img src={coverUrl} alt={module.title} className="max-h-[32rem] w-full object-cover" />
-          </div>
-        )}
 
         <LessonBlockRenderer blocks={blocks} resources={resources} moduleIsFree={module.is_free} />
         <ModuleResourceList resources={resources} moduleIsFree={module.is_free} />
@@ -183,12 +173,6 @@ export default function LessonContentView({ module, blocks, resources }: Props) 
           </p>
         )}
       </div>
-
-      {coverUrl && (
-        <div className="overflow-hidden rounded-2xl border border-border bg-secondary">
-          <img src={coverUrl} alt={module.title} className="max-h-[28rem] w-full object-cover" />
-        </div>
-      )}
 
       <div className="space-y-2">
         <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.25em] text-neutral-500">
