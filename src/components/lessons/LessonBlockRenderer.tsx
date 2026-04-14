@@ -12,13 +12,16 @@ import { SplitTextVideoBlockView, VideoBlockView } from "./blocks/VideoBlocks";
 function getLayoutClass(layout: LessonBlock["layout_type"]) {
   switch (layout) {
     case "full_width":
-      return "max-w-none";
+      return "w-full max-w-none";
     case "narrow":
-      return "mx-auto max-w-2xl";
+      return "mx-auto w-full max-w-2xl";
     case "two_column":
-      return "max-w-5xl";
+      return "w-full max-w-6xl";
+    case "media_left":
+    case "media_right":
+      return "w-full max-w-6xl";
     default:
-      return "mx-auto max-w-5xl";
+      return "mx-auto w-full max-w-3xl";
   }
 }
 

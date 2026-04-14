@@ -82,7 +82,7 @@ export function GalleryBlockView({ block }: { block: GalleryBlock }) {
     <section className="space-y-6">
       {block.title && <h2 className="font-serif text-h3 text-foreground">{block.title}</h2>}
       {block.body && (
-        <p className="max-w-3xl font-sans text-body-lg font-light leading-relaxed text-neutral-300">
+        <p className="w-full font-sans text-body-lg font-light leading-relaxed text-neutral-300">
           {block.body}
         </p>
       )}

@@ -58,7 +58,7 @@ export function ResourceBlockView({
         <div>
           <h3 className="font-serif text-h4 text-foreground">{label}</h3>
           {description && (
-            <p className="mt-2 max-w-2xl font-sans text-body font-light leading-relaxed text-neutral-300">
+            <p className="mt-2 w-full font-sans text-body font-light leading-relaxed text-neutral-300">
               {description}
             </p>
           )}

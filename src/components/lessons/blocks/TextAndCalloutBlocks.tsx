@@ -2,7 +2,7 @@ import type { CalloutBlock, TextBlock } from "../../../types/lesson";
 
 export function TextBlockView({ block }: { block: TextBlock }) {
   return (
-    <section className="mx-auto max-w-3xl">
+    <section className="w-full">
       {block.title && <h2 className="mb-4 font-serif text-h3 text-foreground">{block.title}</h2>}
       <div className="space-y-4 font-sans text-body-lg font-light leading-relaxed text-neutral-200">
         {block.body.split("\n").filter(Boolean).map((paragraph, index) => (
