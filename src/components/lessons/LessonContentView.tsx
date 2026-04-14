@@ -253,9 +253,7 @@ export default function LessonContentView({ module, blocks, resources }: Props) 
             moduleIsFree={module.is_free}
           />
 
-          {activeStep === groups.length - 1 && (
-            <ModuleResourceList resources={resources} moduleIsFree={module.is_free} />
-          )}
+          <ModuleResourceList resources={resources} moduleIsFree={module.is_free} />
 
           <div className="flex items-center justify-between border-t border-border pt-8">
             <button
