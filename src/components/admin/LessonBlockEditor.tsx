@@ -189,7 +189,10 @@ function BlockFields({
   return (
     <div className="space-y-5">
       <div className="grid gap-4 md:grid-cols-2">
-        <FormField label="Heading">
+        <FormField
+          label="Heading"
+          helperText="Headings still render above the block. When a module has multiple headings, the lesson page can also use them as step navigation sections."
+        >
           <input
             value={block.title ?? ""}
             onChange={(event) => onChange({ ...block, title: event.target.value || null })}
